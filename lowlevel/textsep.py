@@ -35,6 +35,11 @@ def court_decisions_separator(text, sep_type='sep1', inden=''):
         separated_acts = re.split(PATTERN_ACT_SEP1, text)
     else:
         separated_acts = re.split(PATTERN_ACT_SEP2, text)
+    separated_acts = [
+        act for act in separated_acts
+        if not re.match(PATTERN_PASS1, act)
+        and not re.match(PATTERN_PASS2, act)
+    ]
     print(
         '{}Acts were separated in {} seconds,'.format(inden, time()-t0),
         '{} acts were found'.format(len(separated_acts)),

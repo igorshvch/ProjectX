@@ -2,7 +2,6 @@ import csv
 import pathlib as pthl
 from time import time
 
-
 __version__ = '0.2.8'
 
 ###Content=====================================================================
