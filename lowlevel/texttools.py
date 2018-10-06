@@ -9,8 +9,8 @@ def clean_txt_and_remove_stpw(par, sep, stpw):
     cleaned = [word for word in par.split(sep) if word not in stpw]
     return ' '.join(cleaned)
     
-def create_bigrams(tokens_list):
-    separator = BGRINR_B
+def create_bigrams(tokens_list, separator):
+    separator = separator
     holder=[]
     holder = [
         separator.join((tokens_list[i-1], tokens_list[i]))

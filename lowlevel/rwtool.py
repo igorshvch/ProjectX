@@ -1,5 +1,8 @@
-import csv
-import pathlib as pthl
+from csv import (
+    writer as csv_writer,
+    QUOTE_MINIMAL as csv_QUOTE_MINIMAL
+)
+from pathlib import Path
 from time import time
 
 __version__ = '0.2.8'
@@ -10,7 +13,7 @@ GLOB_ENC = 'cp1251'
 def collect_exist_files(top_dir, suffix=''):
     holder = []
     def inner_func(top_dir, suffix):
-        p = pthl.Path(top_dir)
+        p = Path(top_dir)
         nonlocal holder
         store = [path_obj for path_obj in p.iterdir()]
         for path_obj in store:
@@ -24,7 +27,7 @@ def collect_exist_files(top_dir, suffix=''):
 def collect_exist_dirs(top_dir):
     holder = []
     def inner_func(top_dir):
-        p = pthl.Path(top_dir)
+        p = Path(top_dir)
         nonlocal holder
         store = [path_obj for path_obj in p.iterdir() if path_obj.is_dir()]
         for path_obj in store:
@@ -36,7 +39,7 @@ def collect_exist_dirs(top_dir):
 def collect_exist_files_and_dirs(top_dir, suffix=''):
     holder = []
     def inner_func(top_dir, suffix):
-        p = pthl.Path(top_dir)
+        p = Path(top_dir)
         nonlocal holder
         store = [path_obj for path_obj in p.iterdir()]
         for path_obj in store:
@@ -64,11 +67,11 @@ def write_iterable_to_csv(full_path,
                           header=None,
                           zero_string=None):
     with open(full_path, mode='w', newline='', encoding=GLOB_ENC) as fle:
-        writer = csv.writer(
+        writer = csv_writer(
             fle,
             delimiter='|',
             quotechar='#',
-            quoting=csv.QUOTE_MINIMAL
+            quoting=csv_QUOTE_MINIMAL
         )
         if zero_string:
             zero_string = (

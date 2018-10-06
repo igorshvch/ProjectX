@@ -20,14 +20,14 @@ PAR_TYPE = 'parser1'
 PARSER = parser_options[PAR_TYPE]
 #==============================================================================
 
-def tokenize(text, threshold=0):
+def tokenize(text, word_len=0):
     text = text.lower().strip()
-    if threshold:
+    if word_len:
         return [
-            token for token in re.split('\W', text) if len(token)>threshold
+            token for token in re.split(r'\W', text) if len(token)>word_len
         ]
     else:
-        return [token for token in re.split('\W', text) if token]
+        return [token for token in re.split(r'\W', text) if token]
 
 def lemmatize(tokens_list):
     local_parser = PARSER
