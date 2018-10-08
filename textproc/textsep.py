@@ -44,7 +44,7 @@ def court_decisions_separator(text, sep_type='sep1', inden=''):
     ]
     print(
         '{}Acts were separated in {} seconds,'.format(inden, time()-t0),
-        '{} acts were found'.format(len(separated_acts)),
+        '{} acts were found'.format(len(separated_acts))
     )
     return separated_acts
 

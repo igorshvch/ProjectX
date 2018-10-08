@@ -33,6 +33,19 @@ def lemmatize(tokens_list):
     local_parser = PARSER
     return [local_parser(token) for token in tokens_list]
 
+def lemmatize_by_map(tokens_list, mapping):
+    return [mapping[token] for token in tokens_list]
+
+def normalize(text, word_len=0):
+    local_parser = PARSER
+    text = text.lower().strip()
+    if word_len:
+        return [
+            local_parser(token) for token in re.split(r'\W', text) if len(token)>word_len
+        ]
+    else:
+        return [local_parser(token) for token in re.split(r'\W', text) if token]
+
 def change_parser():
     global PAR_TYPE
     global PARSER

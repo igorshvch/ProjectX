@@ -52,7 +52,7 @@ def collect_exist_files_and_dirs(top_dir, suffix=''):
     return sorted(holder)
 
 def read_text(path):
-    with open(path, mode='r', encoding=GLOB_ENC) as fle:
+    with open(str(path), mode='r', encoding=GLOB_ENC) as fle:
         text = fle.read()
     return text
 
