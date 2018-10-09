@@ -28,7 +28,7 @@ def court_decisions_cleaner(text, inden=''):
     cleaned_text3 = subn(
         PATTERN_ACT_CLEAN3, '', cleaned_text2, flags=DOTALL
         )[0]
-    print('{}Acts were cleaned in {} seconds'.format(inden, time()-t0))
+    print('{}Acts were cleaned in {:->3.5f} seconds'.format(inden, time()-t0))
     return cleaned_text3[1:-68]
 
 def court_decisions_separator(text, sep_type='sep1', inden=''):
@@ -43,7 +43,7 @@ def court_decisions_separator(text, sep_type='sep1', inden=''):
         and not match(PATTERN_PASS2, act)
     ]
     print(
-        '{}Acts were separated in {} seconds,'.format(inden, time()-t0),
+        '{}Acts were separated in {:->3.5f} seconds,'.format(inden, time()-t0),
         '{} acts were found'.format(len(separated_acts))
     )
     return separated_acts

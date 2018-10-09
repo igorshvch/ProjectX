@@ -8,40 +8,39 @@ DROP TABLE IF EXISTS innerdocindraw;
 DROP TABLE IF EXISTS innerdocindnorm;
 
 CREATE TABLE acts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    text TEXT NOT NULL
+    id INTEGER PRIMARY KEY,
+    act TEXT NOT NULL
 );
 
 CREATE TABLE wordraw (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     word TEXT NOT NULL
 );
 
 CREATE TABLE wordnorm (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     word TEXT NOT NULL
 );
 
 CREATE TABLE wordmapping(
-    rawid INTEGER NOT NULL,
-    norm INTEGER NOT NULL
-        FOREIGN KEY (rawid) REFERENCES wordraw(id)
+    raww TEXT NOT NULL,
+    norm TEXT NOT NULL
 );
 
 CREATE TABLE docindraw (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    word INTEGER NOT NULL,
-    postinglist TEXT NOT NULL,
-        FOREIGN KEY (word) REFERENCES wordraw(id)
+    id INTEGER PRIMARY KEY,
+    word TEXT NOT NULL,
+    postinglist TEXT NOT NULL
 );
+--FOREIGN KEY (word) REFERENCES wordraw(id)
 
 CREATE TABLE docindnorm (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    word INTEGER NOT NULL,
-    postinglist TEXT NOT NULL,
-        FOREIGN KEY (word) REFERENCES wordnorm(id)
+    id INTEGER PRIMARY KEY,
+    word TEXT NOT NULL,
+    postinglist TEXT NOT NULL
 );
-
+--FOREIGN KEY (word) REFERENCES wordnorm(id)
+/*
 CREATE TABLE innerdocindraw(
     word INTEGER NOT NULL,
     act INTEGER NOT NULL,
@@ -58,3 +57,4 @@ CREATE TABLE innerdocindnorm(
         FOREIGN KEY (word) REFERENCES wordnorm(id)
         FOREIGN KEY (act) REFERENCES acts(id)
 );
+*/
