@@ -4,8 +4,10 @@ DROp TABLE IF EXISTS wordnorm;
 DROP TABLE IF EXISTS wordmapping;
 DROP TABLE IF EXISTS docindraw;
 DROP TABLE IF EXISTS docindnorm;
-DROP TABLE IF EXISTS innerdocindraw;
-DROP TABLE IF EXISTS innerdocindnorm;
+DROP TABLE IF EXISTS termfreqraw;
+DROP TABLE IF EXISTS termfreqnorm;
+--DROP TABLE IF EXISTS innerdocindraw;
+--DROP TABLE IF EXISTS innerdocindnorm;
 
 CREATE TABLE acts (
     id INTEGER PRIMARY KEY,
@@ -40,6 +42,22 @@ CREATE TABLE docindnorm (
     postinglist TEXT NOT NULL
 );
 --FOREIGN KEY (word) REFERENCES wordnorm(id)
+
+CREATE TABLE termfreqraw(
+    id INTEGER PRIMARY KEY,
+    actid INTEGER NOT NULL,
+    word TEXT NOT NULL,
+    termfreq INTEGER NOT NULL,
+        FOREIGN KEY (actid) REFERENCES acts(id)
+);
+
+CREATE TABLE termfreqnorm(
+    id INTEGER PRIMARY KEY,
+    actid INTEGER NOT NULL,
+    word TEXT NOT NULL,
+    termfreq INTEGER NOT NULL,
+        FOREIGN KEY (actid) REFERENCES acts(id)
+);
 /*
 CREATE TABLE innerdocindraw(
     word INTEGER NOT NULL,

@@ -6,7 +6,13 @@ INSERT_STMT = {
     'wordnorm' : 'INSERT INTO wordnorm (word) VALUES (?)',
     'wordmapping': 'INSERT INTO wordmapping (raww, norm) VALUES (?, ?)',
     'docindraw': 'INSERT INTO docindraw (word, postinglist) VALUES (?, ?)',
-    'docindnorm': 'INSERT INTO docindnorm (word, postinglist) VALUES (?, ?)'
+    'docindnorm': 'INSERT INTO docindnorm (word, postinglist) VALUES (?, ?)',
+    'termfreqraw': (
+        'INSERT INTO termfreqraw (actid, word, termfreq) VALUES (?, ?, ?)'
+    ),
+    'termfreqnorm': (
+        'INSERT INTO termfreqnorm (actid, word, termfreq) VALUES (?, ?, ?)'
+    )
 }
 
 
