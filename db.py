@@ -1,17 +1,28 @@
 import sqlite3
+import pathlib
 
 INSERT_STMT = {
     'acts': 'INSERT INTO acts (act) VALUES (?)',
     'wordraw' : 'INSERT INTO wordraw (word) VALUES (?)',
     'wordnorm' : 'INSERT INTO wordnorm (word) VALUES (?)',
     'wordmapping': 'INSERT INTO wordmapping (raww, norm) VALUES (?, ?)',
-    'docindraw': 'INSERT INTO docindraw (word, postinglist) VALUES (?, ?)',
-    'docindnorm': 'INSERT INTO docindnorm (word, postinglist) VALUES (?, ?)',
+    'docindraw': (
+        'INSERT INTO docindraw (word, postinglist, docfreq) VALUES (?, ?, ?)'
+    ),
+    'docindnorm': (
+        'INSERT INTO docindnorm (word, postinglist, docfreq) VALUES (?, ?, ?)')
+        ,
     'termfreqraw': (
         'INSERT INTO termfreqraw (actid, word, termfreq) VALUES (?, ?, ?)'
     ),
     'termfreqnorm': (
         'INSERT INTO termfreqnorm (actid, word, termfreq) VALUES (?, ?, ?)'
+    ),
+    'tfidfraw': (
+        'INSERT INTO tfidfraw (actid, vector) VALUES (?, ?)'
+    ),
+    'tfidfnorm': (
+        'INSERT INTO tfidfnorm (actid, vector) VALUES (?, ?)'
     )
 }
 
@@ -23,14 +34,22 @@ def init_db(path):
     connection.commit()
     return connection
 
+def get_con(path):
+    if pathlib.Path(path).exists():
+        return sqlite3.connect(str(path))
+    else:
+        raise ValueError('{} - no such file'.format(path))
+
 def fulfill_tables(connection, dct):
     cursor = connection.cursor()
     tables = cursor.execute(
         'SELECT name FROM sqlite_master WHERE type="table"'
     ).fetchall()
     for table_name in tables: #('wordmapping', 'docindraw', 'docindnorm'):
-        data = dct[table_name[0]]
-        statement = INSERT_STMT[table_name[0]]
-        cursor.executemany(
-            statement, data
-        )
+        table_name = table_name[0]
+        if table_name != 'tfidfraw' and table_name != 'tfidfnorm':
+            data = dct[table_name]
+            statement = INSERT_STMT[table_name]
+            cursor.executemany(
+                statement, data
+            )

@@ -6,6 +6,8 @@ DROP TABLE IF EXISTS docindraw;
 DROP TABLE IF EXISTS docindnorm;
 DROP TABLE IF EXISTS termfreqraw;
 DROP TABLE IF EXISTS termfreqnorm;
+DROP TABLE IF EXISTS tfidfraw;
+DROP TABLE IF EXISTS tfidfnorm;
 --DROP TABLE IF EXISTS innerdocindraw;
 --DROP TABLE IF EXISTS innerdocindnorm;
 
@@ -32,14 +34,16 @@ CREATE TABLE wordmapping(
 CREATE TABLE docindraw (
     id INTEGER PRIMARY KEY,
     word TEXT NOT NULL,
-    postinglist TEXT NOT NULL
+    postinglist TEXT NOT NULL,
+    docfreq INTEGER NOT NULL
 );
 --FOREIGN KEY (word) REFERENCES wordraw(id)
 
 CREATE TABLE docindnorm (
     id INTEGER PRIMARY KEY,
     word TEXT NOT NULL,
-    postinglist TEXT NOT NULL
+    postinglist TEXT NOT NULL,
+    docfreq INTEGER NOT NULL
 );
 --FOREIGN KEY (word) REFERENCES wordnorm(id)
 
@@ -56,6 +60,18 @@ CREATE TABLE termfreqnorm(
     actid INTEGER NOT NULL,
     word TEXT NOT NULL,
     termfreq INTEGER NOT NULL,
+        FOREIGN KEY (actid) REFERENCES acts(id)
+);
+
+CREATE TABLE tfidfraw(
+    actid INTEGER NOT NULL,
+    vector TEXT NOT NULL,
+        FOREIGN KEY (actid) REFERENCES acts(id)
+);
+
+CREATE TABLE tfidfnorm(
+    actid INTEGER NOT NULL,
+    vector TEXT NOT NULL,
         FOREIGN KEY (actid) REFERENCES acts(id)
 );
 /*

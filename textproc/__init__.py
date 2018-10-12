@@ -1,3 +1,5 @@
+import math
+import array
 from collections import Counter
 
 from .rwtools import (
@@ -46,11 +48,11 @@ def timer(func):
 
 def collect_docs(list_of_filepaths):
     print('Starting files processing')
-    sep_acts = []
+    sep_docs = []
     for path in list_of_filepaths:
-        sep_acts+=separate_text(read_text(path))
-    print('There are {} acts in the Corpus'.format(len(sep_acts)))
-    return sep_acts
+        sep_docs+=separate_text(read_text(path))
+    print('There are {} acts in the Corpus'.format(len(sep_docs)))
+    return sep_docs
 
 @timer
 def token_docs(list_of_docs):
@@ -99,7 +101,7 @@ def create_posting_list(list_of_words, docs_set):
             in enumerate(docs_set, start=1)
             if word in set_of_tokens
         ]
-        docind.append((word, ','.join(posting_list)))
+        docind.append((word, ','.join(posting_list), len(posting_list)))
     return docind
 
 @timer
@@ -109,7 +111,32 @@ def count_term_frequences(list_of_tokened_docs):
         counter = Counter(doc)
         for line in counter.items():
             holder.append((ind, *line))
-    return holder    
+    return holder
+
+@timer
+def estimate_tfidf(acts_num, words, dct_docind, dct_termfreq):
+    N = acts_num+1
+    dct = {i:array.array('d') for i in range(1, N)}
+    holder = []
+    for ind in range(1, N):
+        for word in words:
+            df = len(dct_docind[word])
+            tfidf = (
+                dct_termfreq[ind][word]
+                * (math.log(N/(1 + df))+ 1)
+            )
+            dct[ind].append(tfidf)
+        if ind % 50 == 0:
+            print(ind)
+    for ind in range(1, N):
+        vect = dct[ind]
+        lnorm = math.sqrt(sum([(inner**2) for inner in vect]))
+        dct[ind] = [
+            coord/lnorm
+            for coord in vect
+        ]
+    holder = [(ind, dct[ind]) for ind in range(1, N)]
+    return holder
 
 def create_data_for_db(path_to_folder_with_txt_files):
     dct = {}
@@ -145,7 +172,6 @@ def create_data_for_db(path_to_folder_with_txt_files):
 
     termfreqraw = count_term_frequences(list_of_tokened_docs)
     termfreqnorm = count_term_frequences(list_of_lemmed_docs)
-
     
     dct['acts'] = [[doc] for doc in list_of_docs]
     dct['wordraw'] = [[word] for word in list_of_raw_words]
@@ -156,9 +182,10 @@ def create_data_for_db(path_to_folder_with_txt_files):
     dct['termfreqraw'] = termfreqraw
     dct['termfreqnorm'] = termfreqnorm
 
+    end_time = time()-timer_for_all_files
     print(
         'File(s) processed',
-        'in {:.3f} mins'.format((time()-timer_for_all_files)/60)
+        'in {:.3f} mins ({:.3f} sec)'.format(end_time/60, end_time)
     )
     
     return dct
