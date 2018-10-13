@@ -27,10 +27,14 @@ INSERT_STMT = {
 }
 
 
-def init_db(path):
+def init_db(path, schema_path=None):
     connection = sqlite3.connect(str(path))
-    with open(r'C:\Users\EA-ShevchenkoIS\AppData\Local\Continuum\anaconda3\ProjectX\schema.sql') as file:
-        connection.executescript(file.read())
+    if schema_path:
+        with open(schema_path) as file:
+            connection.executescript(file.read())
+    else:
+        with open(r'C:\Users\EA-ShevchenkoIS\AppData\Local\Continuum\anaconda3\ProjectX\schema.sql') as file:
+            connection.executescript(file.read())
     connection.commit()
     return connection
 

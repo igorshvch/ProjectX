@@ -31,8 +31,8 @@ from .texttools import (
 
 def timer(func):
     def wrapper(*args, **kwargs):
-        print('-'*69)
         local_timer = time()
+        print('-'*69)
         print('===========>DO: {:.>53}'.format(func.__name__))
         res = func(*args, **kwargs)
         print('======>COMLETE: {:.>53}'.format(func.__name__))
