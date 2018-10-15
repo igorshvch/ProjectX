@@ -55,15 +55,23 @@ def collect_docs(list_of_filepaths):
     return sep_docs
 
 @timer
-def token_docs(list_of_docs):
+def token_docs(list_of_docs, par_len=None):
+    if par_len:
+        list_of_docs = [
+            '\n'.join(par for par in doc.split('\n') if len(par)>par_len)
+            for doc in list_of_docs
+        ]
     tokened_docs = [tokenize(doc) for doc in list_of_docs]
     return tokened_docs
 
 @timer
-def extract_tokens_in_doc_list(list_of_tokened_docs):
+def extract_tokens_in_doc_list(list_of_tokened_docs, path_to_stpw=None):
     set_of_raw_words = set(
         word for doc in list_of_tokened_docs for word in doc
     )
+    if path_to_stpw:
+        stpw = load_pickle(path_to_stpw)
+        set_of_raw_words-=stpw
     list_of_raw_words = sorted(set_of_raw_words)
     print(
         'There are {:d} unique RAW'.format(len(list_of_raw_words)),
@@ -138,7 +146,9 @@ def estimate_tfidf(acts_num, words, dct_docind, dct_termfreq):
     holder = [(ind, dct[ind]) for ind in range(1, N)]
     return holder
 
-def create_data_for_db(path_to_folder_with_txt_files):
+def create_data_for_db(path_to_folder_with_txt_files,
+                       par_len=None,
+                       path_to_stpw=None):
     dct = {}
 
     list_of_filepaths = collect_exist_files(
@@ -149,8 +159,11 @@ def create_data_for_db(path_to_folder_with_txt_files):
     timer_for_all_files = time()
 
     list_of_docs = collect_docs(list_of_filepaths)
-    list_of_tokened_docs = token_docs(list_of_docs)
-    list_of_raw_words = extract_tokens_in_doc_list(list_of_tokened_docs)
+    list_of_tokened_docs = token_docs(list_of_docs, par_len=par_len)
+    list_of_raw_words = extract_tokens_in_doc_list(
+        list_of_tokened_docs,
+        path_to_stpw=path_to_stpw
+    )
     raw_norm_word_map, list_of_norm_words = (
         create_lem_mapping_and_evalute_lems(list_of_raw_words)
     )

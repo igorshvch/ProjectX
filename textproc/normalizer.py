@@ -34,7 +34,7 @@ def lemmatize(tokens_list):
     return [local_parser(token) for token in tokens_list]
 
 def lemmatize_by_map(tokens_list, mapping):
-    return [mapping[token] for token in tokens_list]
+    return [mapping[token] for token in tokens_list if token in mapping]
 
 def normalize(text, word_len=0):
     local_parser = PARSER
