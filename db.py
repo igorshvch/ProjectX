@@ -44,7 +44,20 @@ def get_con(path):
     else:
         raise ValueError('{} - no such file'.format(path))
 
-def fulfill_tables(connection, dct):
+def fulfill_tfidf_table(connection, mtrx, mode='raw'):
+    cursor = connection.cursor()
+    if mode == 'raw':
+        table = 'tfidfraw'
+    elif mode == 'norm':
+        table = 'tfidfnorm'
+    cursor.executemany(
+        '''
+        INSERT INTO {tb} (vector) VALUES (?)
+        '''.format(tb=table),
+        mtrx
+    )
+
+def fulfill_tables_with_dct(connection, dct):
     cursor = connection.cursor()
     tables = cursor.execute(
         'SELECT name FROM sqlite_master WHERE type="table"'

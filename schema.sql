@@ -64,15 +64,13 @@ CREATE TABLE termfreqnorm(
 );
 
 CREATE TABLE tfidfraw(
-    actid INTEGER NOT NULL,
-    vector TEXT NOT NULL,
-        FOREIGN KEY (actid) REFERENCES acts(id)
+    actid INTEGER PRIMARY KEY,
+    vector TEXT NOT NULL
 );
 
 CREATE TABLE tfidfnorm(
-    actid INTEGER NOT NULL,
-    vector TEXT NOT NULL,
-        FOREIGN KEY (actid) REFERENCES acts(id)
+    actid INTEGER PRIMARY KEY,
+    vector TEXT NOT NULL
 );
 /*
 CREATE TABLE innerdocindraw(
