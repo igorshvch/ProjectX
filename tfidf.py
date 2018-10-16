@@ -75,7 +75,8 @@ def count_and_store_tfidf(con, mode='raw', step=100):
         norm = euqlid_norm(vect)
         str_vect = ','.join(str(val/norm) for val in vect)
         mtrx.append([str_vect])
-    fulfill_tfidf_table(con, mtrx)
+    fulfill_tfidf_table(con, mtrx, mode=mode)
+    local_time = time()-timer
     print(
         'Tfidf counting complete in',
         '{:.3f}m, {:.3f}s'.format(local_time/60, local_time)

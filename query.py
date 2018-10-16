@@ -134,6 +134,7 @@ def overlap_score_measure(connection, query_text, mode='raw', step=100):
             vector = row[0].split(',')
             vector = [float(coord) for coord in vector]
             holder.append((inner_ind, sum(vector[pos] for pos in positions)))
+        inner_ind += 1
     return holder
 
 def overlap_score_measure_old(connection, query_text, mode='raw'):
