@@ -14,6 +14,15 @@ def load_all_words(connection, words='raw'):
     ).fetchall()
     return [row[0] for row in words]
 
+def load_mapping(connection):
+    cursor = connection.cursor()
+    mapping = cursor.execute(
+        '''
+        SELECT raww, norm FROM wordmapping
+        '''
+    ).fetchall()
+    return {raww:word for raww,word in mapping}
+
 def load_all_acts(connection):
     cursor = connection.cursor()
     acts = cursor.execute(
@@ -117,9 +126,9 @@ def overlap_score_measure(connection, query_text, mode='raw', step=100):
     query_text = re.split(r'\W', query_text.lower(), flags=re.DOTALL)
     vocab = {
         word:position for position,word
-        in enumerate(load_all_words(connection))
+        in enumerate(load_all_words(connection, words=mode))
     }
-    positions = [vocab[word] for word in query_text if word]
+    positions = [vocab[word] for word in query_text if word in vocab]
     gen = iterate_row_loading(connection, table, ('vector',), step=step)
     holder = []
     inner_ind = 0
@@ -127,8 +136,8 @@ def overlap_score_measure(connection, query_text, mode='raw', step=100):
     for ind, batch in enumerate(gen, start=1):
         local_time = time() - local_timer
         print(
-            'Batch # {:02d}'.format(ind),
-            'TIME: {:6.3f}m, {:8.3f}s'.format(local_time/60, local_time)
+            'Batch # {: >3d}'.format(ind),
+            'TIME: {: >6.3f}m, {: >8.3f}s'.format(local_time/60, local_time)
         )
         for inner_ind, row in enumerate(batch, start=inner_ind):
             vector = row[0].split(',')
@@ -147,7 +156,7 @@ def overlap_score_measure_old(connection, query_text, mode='raw'):
     N = cursor.execute("SELECT Count(*) FROM acts").fetchone()[0]
     vocab = {
         word:position for position,word
-        in enumerate(load_all_words(connection))
+        in enumerate(load_all_words(connection, words=mode))
     }
     positions = [vocab[word] for word in query_text if word]
     stmt = (
