@@ -58,7 +58,7 @@ def load_all_postinglists(connection, mode='raw'):
     ).fetchall()
     return {word:postlist.split(',') for word,postlist in docfreq}
 
-def tfidf_info(connection, act_id, word, mode='raw'):
+def load_tfidf_info(connection, act_id, word, mode='raw'):
     cursor = connection.cursor()
     N = cursor.execute("SELECT Count(*) FROM acts").fetchone()[0]
     #print('Total acts number: {}'.format(N))
@@ -117,70 +117,6 @@ def iterate_row_loading(connection, table, cols, step=100):
             '''.format(cols=cols, tb=table, batch=step, ofs=(i*step))
         )
         yield cursor.execute(stmt).fetchall()
-
-def overlap_score_measure(connection, query_text, mode='raw', step=100):
-    if mode == 'raw':
-        table='tfidfraw'
-    elif mode == 'norm':
-        table='tfidfnorm'
-    query_text = re.split(r'\W', query_text.lower(), flags=re.DOTALL)
-    vocab = {
-        word:position for position,word
-        in enumerate(load_all_words(connection, words=mode))
-    }
-    positions = [vocab[word] for word in query_text if word in vocab]
-    gen = iterate_row_loading(connection, table, ('vector',), step=step)
-    holder = []
-    inner_ind = 0
-    local_timer = time()
-    for ind, batch in enumerate(gen, start=1):
-        local_time = time() - local_timer
-        print(
-            'Batch # {: >3d}'.format(ind),
-            'TIME: {: >6.3f}m, {: >8.3f}s'.format(local_time/60, local_time)
-        )
-        for inner_ind, row in enumerate(batch, start=inner_ind):
-            vector = row[0].split(',')
-            vector = [float(coord) for coord in vector]
-            holder.append((inner_ind, sum(vector[pos] for pos in positions)))
-        inner_ind += 1
-    return holder
-
-def overlap_score_measure_old(connection, query_text, mode='raw'):
-    cursor = connection.cursor()
-    if mode == 'raw':
-        table='tfidfraw'
-    elif mode == 'norm':
-        table='tfidfnorm'
-    query_text = re.split(r'\W', query_text.lower(), flags=re.DOTALL)
-    N = cursor.execute("SELECT Count(*) FROM acts").fetchone()[0]
-    vocab = {
-        word:position for position,word
-        in enumerate(load_all_words(connection, words=mode))
-    }
-    positions = [vocab[word] for word in query_text if word]
-    stmt = (
-        '''
-        SELECT vector FROM {}
-        WHERE rowid=?
-        '''.format(table)
-    )
-    gen = ((stmt, str(i)) for i in range(1, N+1))
-    holder = []
-    local_timer = time()
-    for ind, vals in enumerate(gen, start=1):
-        vector = cursor.execute(vals[0], (vals[1],)).fetchone()[0]
-        vector = vector.split(',')
-        vector = [float(coord) for coord in vector]
-        holder.append((ind, sum(vector[j] for j in positions)))
-        if ind % 100 == 0:
-            local_time = time() - local_timer
-            print(
-                'Act #',
-                ind,
-                'TIME: {:.3f}m, {:.3f}s'.format(local_time/60, local_time)
-            )
-    return holder
 
 
 ##########

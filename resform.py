@@ -4,7 +4,7 @@ from db import overlap_score_measure
 def write_to_file(con, concls, all_acts, mode='raw'):
     from writer import writer
     for ind, concl in enumerate(concls, start=1):
-        holder = [concl]
+        holder = [concl, '='*127]
         res = overlap_score_measure(con, concl, mode=mode, step = 500)
         res_s = sorted(res, key=lambda x: x[1], reverse=True)[:5]
         for act_info in res_s:
