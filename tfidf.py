@@ -6,9 +6,11 @@ from db import (
     fulfill_tfidf_table,
     load_all_doc_freq,
     load_all_acts,
-    load_mapping
+    load_all_words,
+    load_mapping,
+    iterate_row_loading
 )
-from textproc import timer, tokenize, lemmatize_by_map
+from textproc import timer, tokenize, lemmatize, lemmatize_by_map
 
 def tfidf(N):
     def inner_f(df, tf):
@@ -107,6 +109,39 @@ def count_and_store_tfidf(con,
         'Tfidf counting complete in',
         '{:.3f}m, {:.3f}s'.format(local_time/60, local_time)
     )
+
+def overlap_score_measure(con, query_text, mode='raw', step=100):
+    if mode == 'raw':
+        table='tfidfraw'
+    elif mode == 'norm':
+        table='tfidfnorm'
+    query_text = tokenize(query_text)
+    if mode == 'norm':
+        query_text = lemmatize(query_text)
+    vocab = {
+        word:position for position,word
+        in enumerate(load_all_words(con, words=mode))
+    }
+    positions = [vocab[word] for word in query_text if word in vocab]
+    gen = iterate_row_loading(con, table, ('vector',), step=step)
+    holder = []
+    inner_ind = 0
+    local_timer = time()
+    for ind, batch in enumerate(gen, start=1):
+        local_time = time() - local_timer
+        print(
+            'Batch # {: >3d}'.format(ind),
+            'TIME: {: >6.3f}m, {: >8.3f}s'.format(local_time/60, local_time)
+        )
+        for inner_ind, row in enumerate(batch, start=inner_ind):
+            vector = row[0].split(',')
+            vector = [float(coord) for coord in vector]
+            holder.append((inner_ind, sum(vector[pos] for pos in positions)))
+        inner_ind += 1
+    return holder
+
+def cosine_similarity 
+
     
 
 
