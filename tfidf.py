@@ -4,6 +4,7 @@ from time import time
 
 from db import (
     fulfill_tfidf_table,
+    load_num_of_docs,
     load_all_doc_freq,
     load_all_acts,
     load_all_words,
@@ -140,8 +141,47 @@ def overlap_score_measure(con, query_text, mode='raw', step=100):
         inner_ind += 1
     return holder
 
-def cosine_similarity 
+def estimate_query_vect(con, query_text, mode='raw'):
+    query_text = tokenize(query_text)
+    if mode == 'norm':
+        query_text = lemmatize(query_text)
+    cnt = Counter()
+    cnt.update(query_text)
+    tfidf_func = tfidf(load_num_of_docs(con))
+    df = load_all_doc_freq(con, mode=mode)
+    all_words = load_all_words(con, words=mode)
+    vect = [(cnt.get(word,0), word) for word in all_words]
+    vect = [tfidf_func(df[word], tf) if tf else 0 for tf, word in vect]
+    norm = euclid_norm(vect)
+    vect = [c/norm for c in vect]
+    return vect
 
+def cosine_similarity(con, query_vect, mode='raw', step=100):
+    if mode == 'raw':
+        table='tfidfraw'
+    elif mode == 'norm':
+        table='tfidfnorm'
+    gen = iterate_row_loading(con, table, ('vector',), step=step)
+    holder = []
+    inner_ind = 0
+    local_timer = time()
+    for ind, batch in enumerate(gen, start=1):
+        local_time = time() - local_timer
+        print(
+            'Batch # {: >3d}'.format(ind),
+            'TIME: {: >6.3f}m, {: >8.3f}s'.format(local_time/60, local_time)
+        )
+        for inner_ind, row in enumerate(batch, start=inner_ind):
+            vector = row[0].split(',')
+            vector = [float(coord) for coord in vector]
+            result = sum(c1*c2 for c1, c2 in zip(query_vect, vector))
+            holder.append((inner_ind, result))
+        inner_ind += 1
+    return holder
+
+def aggr_query_vect_cos_sim(con, query_text, mode, step=500):
+    query_vect = estimate_query_vect(con, query_text, mode=mode)
+    return cosine_similarity(con, query_vect, mode=mode, step=step)
     
 
 
