@@ -9,7 +9,9 @@ from db import (
     load_all_acts,
     load_all_words,
     load_mapping,
-    iterate_row_loading
+    iterate_row_loading,
+    find_all_words,
+    load_tfidf_vector
 )
 from textproc import timer, tokenize, lemmatize, lemmatize_by_map
 
@@ -182,6 +184,37 @@ def cosine_similarity(con, query_vect, mode='raw', step=100):
 def aggr_query_vect_cos_sim(con, query_text, mode, step=500):
     query_vect = estimate_query_vect(con, query_text, mode=mode)
     return cosine_similarity(con, query_vect, mode=mode, step=step)
+
+def efficient_cosine_similarity(con, query_text, mode='raw'):
+    res_holder = []
+    #df_all = load_all_doc_freq(con, mode=mode)
+    all_words = load_all_words(con, words=mode)
+    query_vect = estimate_query_vect(con, query_text, mode=mode)
+    vect_data = [
+        (word, score) for word, score
+        in zip(all_words, query_vect) if score>0
+    ]
+    vect_data = sorted(vect_data, key = lambda x: x[1], reverse=True)[:10]
+    base_similarity_condition = [word for word, score in vect_data if len(word)>2]
+    while base_similarity_condition:
+        if len(base_similarity_condition) == 2:
+            break
+        acts_ind = find_all_words(con, base_similarity_condition, mode=mode)
+        acts_found = len(acts_ind)
+        if acts_found >= 5 and acts_found <= 8:
+            break
+        else:
+            base_similarity_condition.pop()
+    print(acts_ind)
+    for ind in acts_ind:
+        #print(ind)
+        vector = load_tfidf_vector(con, ind, mode=mode).split(',')
+        vector = [float(coord) for coord in vector]
+        result = sum(c1*c2 for c1, c2 in zip(query_vect, vector))
+        res_holder.append((int(ind)-1, result))
+    return sorted(res_holder, key=lambda x:x[1], reverse=True)
+
+
     
 
 

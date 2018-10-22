@@ -31,13 +31,20 @@ def OSM_write_to_file(con, concls, all_acts, mode='raw'):
         )
 
 def default_write_to_file(con, concls, all_acts, func, mode=None, step=500):
+    options ={
+        (1,1):lambda con,concl,mode,step: func(con,concl,mode=mode,step=step),
+        (1,0):lambda con,concl,mode,step: func(con,concl,mode=mode),
+        (0,1):lambda con,concl,mode,step: func(con,concl,step=step),
+        (0,0):lambda con,concl,mode,step: func(con,concl)
+    }
     from writer import writer
     for ind, concl in enumerate(concls, start=1):
         holder = [concl, '='*127]
-        if mode:
-            res = func(con, concl, mode=mode, step = step)
-        else:
-            res = func(con, concl, step = step)
+        #if mode:
+        #    res = func(con, concl, mode=mode, step = step)
+        #else:
+        #    res = func(con, concl, step = step)
+        res = options[bool(mode), bool(step)](con, concl, mode, step)
         res_s = sorted(res, key=lambda x: x[1], reverse=True)[:5]
         for act_info in res_s:
             pos, score = act_info
@@ -75,7 +82,22 @@ def write_to_file(res, all_acts, file_name):
 def concl_words_tfidf_score(con, concl, mode='raw', filenameadder=None):
     all_words = load_all_words(con, words=mode)
     vector = estimate_query_vect(con, concl, mode=mode)
-    vect_data = [(word, score) for word, score in zip(all_words, vector) if score>0]
+    vect_data = [
+        (word, score) for word, score
+        in zip(all_words, vector) if score>0
+    ]
     vect_data = sorted(vect_data, key = lambda x: x[1], reverse=True)
-    holder = [concl] + ['='*96] + ['{:.<30s} {: >10.7f}'.format(word, score) for word, score in vect_data] + ['='*96]
-    writer(holder, 'vect_{}_data_{}'.format(mode.upper(), filenameadder), mode='w')
+    holder = (
+        [concl]
+        +['='*96]
+        +[
+            '{:.<30s} {: >10.7f}'.format(word, score)
+            for word, score in vect_data
+        ]
+        +['='*96]
+    )
+    writer(
+        holder,
+        'vect_{}_data_{}'.format(mode.upper(),
+        filenameadder), mode='w'
+    )
