@@ -1,6 +1,10 @@
 import re
 from time import time
 
+def load_num_of_docs(connection):
+    cursor = connection.cursor()
+    return cursor.execute("SELECT Count(*) FROM acts").fetchone()[0]
+
 def load_all_words(connection, words='raw'):
     cursor = connection.cursor()
     if words == 'raw':
@@ -60,8 +64,7 @@ def load_all_postinglists(connection, mode='raw'):
 
 def load_tfidf_info(connection, act_id, word, mode='raw'):
     cursor = connection.cursor()
-    N = cursor.execute("SELECT Count(*) FROM acts").fetchone()[0]
-    #print('Total acts number: {}'.format(N))
+    N = load_num_of_docs(connection)
     clean_word = word.lower()
     if mode == 'raw':
         table1 = 'docindraw'
