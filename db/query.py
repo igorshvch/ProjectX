@@ -88,7 +88,7 @@ def load_tfidf_info(connection, act_id, word, mode='raw'):
     ).fetchone()[0]
     return N, df, tf
 
-def load_doc_vector(connection, act_id, mode='raw'):
+def load_tfidf_vector(connection, act_id, mode='raw'):
     cursor = connection.cursor()
     if mode == 'raw':
         table='tfidfraw'
@@ -99,7 +99,7 @@ def load_doc_vector(connection, act_id, mode='raw'):
         SELECT vector FROM {}
         WHERE rowid=?
         '''.format(table),
-        str(act_id)
+        (str(act_id),)
     ).fetchone()[0]
     return vector
 
@@ -149,7 +149,7 @@ def find_all_words_raw(connection, query):
             (str(int(index)+1),)
         ).fetchone()
         acts_list.append(act)
-    return post_lists, acts_list
+    return res_pl, post_lists, acts_list
 
 def find_all_words_norm(connection, query):
     words = re.split(r'\W', query.lower(), flags=re.DOTALL)
@@ -188,5 +188,52 @@ def find_all_words_norm(connection, query):
             (str(int(index)+1),)
         ).fetchone()
         acts_list.append(act)
-    return post_lists, acts_list
+    return res_pl, post_lists, acts_list
+
+def find_all_words(connection, query, mode='raw'):
+    if mode == 'raw':
+        table = 'docindraw'
+    elif mode == 'norm':
+        table = 'docindnorm'
+    else:
+        print('Mode error!')
+        return None
+    print('Mode:', mode, 'Table:', table)
+    if isinstance(query, str):
+        query = re.split(r'\W', query.lower(), flags=re.DOTALL)
+        query = [word for word in query if word]
+    elif isinstance(query, list):
+        pass
+    cursor = connection.cursor()
+    post_lists = []
+    print('I AM HERE!')
+    #if mode == 'norm':
+    #    print('NORM mode')
+    #   norm_query = []
+    #    for word in query:
+    #        print('MAPPING', word, end=' ')
+    #        nw = cursor.execute(
+    #            '''
+    #            SELECT norm FROM wordmapping
+    #            WHERE raww=?
+    #            ''',
+    #            (word,)
+    #        ).fetchone()[0]
+    #        norm_query.append(nw)
+    #        print('done')
+    #    print('Normed query:\n{}'.format(norm_query))
+    #    query = norm_query
+    for word in query:
+        print('postinglist', word, end=' ')
+        pl = cursor.execute(
+            '''
+            SELECT postinglist FROM {tb}
+            WHERE word=?
+            '''.format(tb=table),
+            (word,)
+        ).fetchone()[0]
+        print(word, 'done')
+        post_lists.append(set(pl.split(',')))
+    res_pl = post_lists[0].intersection(*post_lists[1:])
+    return res_pl
     
