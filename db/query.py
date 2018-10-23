@@ -190,7 +190,7 @@ def find_all_words_norm(connection, query):
         acts_list.append(act)
     return res_pl, post_lists, acts_list
 
-def find_all_words(connection, query, mode='raw'):
+def find_all_words(connection, query, mode='raw', inden=''):
     if mode == 'raw':
         table = 'docindraw'
     elif mode == 'norm':
@@ -198,15 +198,23 @@ def find_all_words(connection, query, mode='raw'):
     else:
         print('Mode error!')
         return None
-    print('Mode:', mode, 'Table:', table)
+    print(inden+'{: <6s} : {}'.format('mode', mode))
+    print(inden+'{: <6s} : {}'.format('table', table))
     if isinstance(query, str):
         query = re.split(r'\W', query.lower(), flags=re.DOTALL)
         query = [word for word in query if word]
+        print(
+            inden
+            +'{: <6s} : {}'.format('query', 'transformed to list of tokens')
+        )
     elif isinstance(query, list):
-        pass
+        print(
+            inden
+            +'{: <6s} : {}'.format('query', 'passed in as list of tokens')
+        )
     cursor = connection.cursor()
     post_lists = []
-    print('I AM HERE!')
+    #print('I AM HERE!')
     #if mode == 'norm':
     #    print('NORM mode')
     #   norm_query = []
@@ -224,15 +232,15 @@ def find_all_words(connection, query, mode='raw'):
     #    print('Normed query:\n{}'.format(norm_query))
     #    query = norm_query
     for word in query:
-        print('postinglist', word, end=' ')
+        #print('postinglist', word, end=' ')
         pl = cursor.execute(
             '''
-            SELECT postinglist FROM {tb}
+            SELECT postinglist FROM {}
             WHERE word=?
-            '''.format(tb=table),
+            '''.format(table),
             (word,)
         ).fetchone()[0]
-        print(word, 'done')
+        #print(word, 'done')
         post_lists.append(set(pl.split(',')))
     res_pl = post_lists[0].intersection(*post_lists[1:])
     return res_pl

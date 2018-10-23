@@ -197,14 +197,17 @@ def efficient_cosine_similarity(con, query_text, mode='raw'):
     vect_data = sorted(vect_data, key = lambda x: x[1], reverse=True)[:10]
     base_similarity_condition = [word for word, score in vect_data if len(word)>2]
     while base_similarity_condition:
-        if len(base_similarity_condition) == 2:
-            break
-        acts_ind = find_all_words(con, base_similarity_condition, mode=mode)
+        print('{: <6s} : {:d}'.format('BSC', len(base_similarity_condition)))
+        acts_ind = find_all_words(
+            con, base_similarity_condition, mode=mode, inden='\t'
+        )
         acts_found = len(acts_ind)
+        print('{: <6s} : {:d}'.format('acts_l', acts_found))
         if acts_found >= 5 and acts_found <= 8:
             break
-        else:
-            base_similarity_condition.pop()
+        base_similarity_condition.pop()
+        if len(base_similarity_condition) == 2:
+            break
     print(acts_ind)
     for ind in acts_ind:
         #print(ind)
@@ -212,7 +215,11 @@ def efficient_cosine_similarity(con, query_text, mode='raw'):
         vector = [float(coord) for coord in vector]
         result = sum(c1*c2 for c1, c2 in zip(query_vect, vector))
         res_holder.append((int(ind)-1, result))
-    return sorted(res_holder, key=lambda x:x[1], reverse=True)
+    res_holder = sorted(res_holder, key=lambda x:x[1], reverse=True)
+    if len(res_holder) > 8:
+        return res_holder[:8]
+    else:
+        return res_holder
 
 
     
