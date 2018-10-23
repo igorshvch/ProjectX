@@ -203,7 +203,7 @@ def efficient_cosine_similarity(con, query_text, mode='raw'):
         )
         acts_found = len(acts_ind)
         print('{: <6s} : {:d}'.format('acts_l', acts_found))
-        if acts_found >= 5 and acts_found <= 8:
+        if acts_found >= 5:
             break
         base_similarity_condition.pop()
         if len(base_similarity_condition) == 2:

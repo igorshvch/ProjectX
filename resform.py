@@ -30,7 +30,13 @@ def OSM_write_to_file(con, concls, all_acts, mode='raw'):
             mode='w'
         )
 
-def default_write_to_file(con, concls, all_acts, func, mode=None, step=500):
+def default_write_to_file(con,
+                          concls,
+                          all_acts,
+                          func,
+                          mode=None,
+                          step=500,
+                          filenameadder=''):
     options ={
         (1,1):lambda con,concl,mode,step: func(con,concl,mode=mode,step=step),
         (1,0):lambda con,concl,mode,step: func(con,concl,mode=mode),
@@ -57,10 +63,11 @@ def default_write_to_file(con, concls, all_acts, func, mode=None, step=500):
             holder.append(st)
         writer(
             holder,
-            '{}_{}_concl_{:02d}'.format(
+            '{}_{}_concl_{:02d}{}'.format(
                 func.__name__,
                 mode.upper(),
-                ind
+                ind,
+                filenameadder
             ),
             mode='w'
         )
