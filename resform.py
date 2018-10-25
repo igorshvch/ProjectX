@@ -63,16 +63,16 @@ def default_write_to_file(con,
             holder.append(st)
         writer(
             holder,
-            '{}_{}_concl_{:02d}{}'.format(
+            '{}_{}_{}_concl_{:02d}'.format(
                 func.__name__,
                 mode.upper(),
-                ind,
-                filenameadder
+                filenameadder,
+                ind
             ),
             mode='w'
         )
 
-def write_to_file(res, all_acts, file_name):
+def write_results_to_file(res, all_acts, file_name):
     from writer import writer
     holder = []
     for act_info in res:
@@ -86,7 +86,11 @@ def write_to_file(res, all_acts, file_name):
         holder.append(st)
     writer(holder, file_name, mode='w')
 
-def concl_words_tfidf_score(con, concl, mode='raw', filenameadder=None):
+def concl_words_tfidf_score(con,
+                            concl,
+                            mode='raw',
+                            filenameadder=None,
+                            write_to_file=True):
     all_words = load_all_words(con, words=mode)
     vector = estimate_query_vect(con, concl, mode=mode)
     vect_data = [
@@ -94,17 +98,19 @@ def concl_words_tfidf_score(con, concl, mode='raw', filenameadder=None):
         in zip(all_words, vector) if score>0
     ]
     vect_data = sorted(vect_data, key = lambda x: x[1], reverse=True)
-    holder = (
-        [concl]
-        +['='*96]
-        +[
-            '{:.<30s} {: >10.7f}'.format(word, score)
-            for word, score in vect_data
-        ]
-        +['='*96]
-    )
-    writer(
-        holder,
-        'vect_{}_data_{}'.format(mode.upper(),
-        filenameadder), mode='w'
-    )
+    if write_to_file:
+        holder = (
+            [concl]
+            +['='*96]
+            +[
+                '{:.<30s} {: >10.7f}'.format(word, score)
+                for word, score in vect_data
+            ]
+            +['='*96]
+        )
+        filename = 'vect_{}_data_{}'.format(mode.upper(),filenameadder)
+        writer(holder, filename, mode='w')
+    else:
+        words = [word for word, score in vect_data][:10]
+        words = [word for word in words if len(word)>2]
+        print ('CONCL {:0>5d}'.format(filenameadder), ', '.join(words))
