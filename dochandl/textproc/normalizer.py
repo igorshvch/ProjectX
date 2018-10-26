@@ -20,14 +20,18 @@ PAR_TYPE = 'parser1'
 PARSER = parser_options[PAR_TYPE]
 #==============================================================================
 
-def tokenize(text, word_len=0):
+def tokenize(text, word_len=0, mode='single'):
+    if mode == 'single':
+        pattern = r'\W'
+    elif mode == 'hyphen':
+        pattern = r'[^a-zA-Z0-9_-]'
     text = text.lower().strip()
     if word_len:
         return [
-            token for token in re.split(r'\W', text) if len(token)>word_len
+            token for token in re.split(pattern, text) if len(token)>word_len
         ]
     else:
-        return [token for token in re.split(r'\W', text) if token]
+        return [token for token in re.split(pattern, text) if token]
 
 def lemmatize(tokens_list):
     local_parser = PARSER

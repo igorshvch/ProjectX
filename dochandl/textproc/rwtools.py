@@ -98,6 +98,7 @@ def load_pickle(path):
     return data            
 
 def save_obj(py_obj, name, save_path):
+    save_path = Path(save_path)
     path = save_path.joinpath(name)
     save_pickle(py_obj, str(path))
 

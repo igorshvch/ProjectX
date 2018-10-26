@@ -1,50 +1,22 @@
 import math
 import array
 from collections import Counter
+from time import time
 
-from .rwtools import (
+from debugger import timer_with_func_name as timer
+from .textproc  import (
     collect_exist_files,
-    collect_exist_dirs,
-    collect_exist_files_and_dirs,
     read_text,
-    write_text,
-    save_obj,
     load_pickle
 )
-from .textsep import (
+from .textproc.textsep import (
     separate_text
 )
-from .normalizer import (
+from .textproc.normalizer import (
     PARSER,
     tokenize,
-    lemmatize,
-    normalize,
     lemmatize_by_map
 )
-from .texttools import (
-    clean_txt_and_remove_stpw,
-    create_bigrams,
-    form_string_numeration,
-    form_string_pattern,
-    time
-)
-
-def timer(func):
-    def wrapper(*args, **kwargs):
-        local_timer = time()
-        print('-'*69)
-        print('===========>DO: {:.>53}'.format(func.__name__))
-        res = func(*args, **kwargs)
-        print('======>COMLETE: {:.>53}'.format(func.__name__))
-        end_time = time() - local_timer
-        print(
-            '=========>TIME: {:.3f} min ({:.3f} sec)'.format(
-                end_time/60, end_time
-            )
-        )
-        print('-'*69)
-        return res
-    return wrapper
 
 def collect_docs(list_of_filepaths):
     print('Starting files processing')
@@ -61,11 +33,11 @@ def token_docs(list_of_docs, par_len=None):
             '\n'.join(par for par in doc.split('\n') if len(par)>par_len)
             for doc in list_of_docs
         ]
-    tokened_docs = [tokenize(doc) for doc in list_of_docs]
+    tokened_docs = [tokenize(doc, mode='hyphen') for doc in list_of_docs]
     return tokened_docs
 
 @timer
-def extract_tokens_in_doc_list(list_of_tokened_docs, path_to_stpw=None):
+def extract_tokens_from_doc_list(list_of_tokened_docs, path_to_stpw=None):
     set_of_raw_words = set(
         word for doc in list_of_tokened_docs for word in doc
     )
@@ -160,7 +132,7 @@ def create_data_for_db(path_to_folder_with_txt_files,
 
     list_of_docs = collect_docs(list_of_filepaths)
     list_of_tokened_docs = token_docs(list_of_docs, par_len=par_len)
-    list_of_raw_words = extract_tokens_in_doc_list(
+    list_of_raw_words = extract_tokens_from_doc_list(
         list_of_tokened_docs,
         path_to_stpw=path_to_stpw
     )
