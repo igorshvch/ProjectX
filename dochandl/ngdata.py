@@ -28,7 +28,8 @@ from .textproc.texttools import (
     create_bigrams
 )
 
-def collect_docs(list_of_filepaths):
+@timer
+def collect_and_sep_docs(list_of_filepaths):
     print('Starting files processing')
     sep_docs = []
     for path in list_of_filepaths:
@@ -43,8 +44,10 @@ def tokened_docs(list_of_docs, par_len=None):
             '\n'.join(par for par in doc.split('\n') if len(par)>par_len)
             for doc in list_of_docs
         ]
-    tokened_docs = [tokenize(doc, mode='hyphen') for doc in list_of_docs]
-    return tokened_docs
+    list_of_tokened_docs = [
+        tokenize(doc, mode='hyphen') for doc in list_of_docs
+    ]
+    return list_of_tokened_docs
 
 @timer
 def clean_tokened_docs_from_stpw(list_of_tokened_docs, stpw):
@@ -91,7 +94,7 @@ def lem_docs(list_of_tokened_docs, mapping):
 def create_ngrams_from_tokened_docs(list_of_tokened_docs,
                                     ngram_func=create_bigrams):
     list_of_bigrammed_docs = [
-        ngram_func(doc) for doc in tokened_docs
+        ngram_func(doc) for doc in list_of_tokened_docs
     ]
     return list_of_bigrammed_docs
 
@@ -101,13 +104,72 @@ def create_list_of_docs_set(list_of_tokened_docs):
     return list_of_docs_set
 
 @timer
-def create_posting_list(list_of_words, list_of_docs_set):
+def create_posting_list(list_of_tokens, list_of_docs_set):
     docind = []
-    for word in list_of_words:
-        posting_list = [
-            str(ind) for ind, set_of_tokens
-            in enumerate(docs_set, start=1)
-            if word in set_of_tokens
-        ]
-        docind.append((word, ','.join(posting_list), len(posting_list)))
+    dct = {token:[] for token in list_of_tokens}
+    for ind, doc in enumerate(list_of_docs_set, start=1):
+        for token in doc:
+            dct[token].append(str(ind))
+    for token in list_of_tokens:
+        postlist = dct[token]
+        docind.append((token, ','.join(postlist), len(postlist)))
     return docind
+
+@timer
+def count_term_frequences(list_of_tokened_docs):
+    holder = []
+    for ind, doc in enumerate(list_of_tokened_docs, start=1):
+        counter = Counter(doc)
+        for line in counter.items():
+            holder.append((ind, *line))
+    return holder
+
+def create_data_for_db(path_to_folder_with_txt_files,
+                       par_len=None,
+                       path_to_stpw=None):
+    if path_to_stpw:
+        stpw = load_pickle(path_to_stpw)
+    
+    dct = {}
+    
+    list_of_filepaths = collect_exist_files(
+        path_to_folder_with_txt_files,
+        suffix='.txt'
+    )
+
+    timer_for_all_files = time()
+
+    ##############
+
+    list_of_docs = collect_and_sep_docs(list_of_filepaths)
+    list_of_tokened_docs = tokened_docs(list_of_docs, par_len=par_len)
+    if path_to_stpw:
+        list_of_tokened_docs = clean_tokened_docs_from_stpw(
+            list_of_tokened_docs, stpw
+        )
+    list_of_words = extract_tokens_from_doc_list(list_of_tokened_docs)
+    mapping, list_of_lemms = create_lem_mapping_and_evalute_lems(
+        list_of_words
+    )
+    list_of_lemmed_docs = lem_docs(list_of_tokened_docs, mapping)
+
+
+
+    ##############
+
+    dct['acts'] = [[doc] for doc in list_of_docs]
+    dct['wordraw'] = [[word] for word in list_of_raw_words]
+    dct['wordnorm'] = [[word] for word in list_of_norm_words]
+    dct['wordmapping'] = [i for i in raw_norm_word_map.items()]
+    dct['docindraw'] = docindraw
+    dct['docindnorm'] = docindnorm
+    dct['termfreqraw'] = termfreqraw
+    dct['termfreqnorm'] = termfreqnorm
+
+    end_time = time()-timer_for_all_files
+    print(
+        'File(s) processed',
+        'in {:.3f} mins ({:.3f} sec)'.format(end_time/60, end_time)
+    )
+    
+    return dct

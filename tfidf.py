@@ -13,7 +13,7 @@ from db import (
     find_all_words,
     load_tfidf_vector
 )
-from textproc import timer, tokenize, lemmatize, lemmatize_by_map
+from dochandl import tokenize, lemmatize, lemmatize_by_map
 
 def tfidf(N):
     def inner_f(df, tf):

@@ -73,15 +73,15 @@ def lem_docs(list_of_tokened_docs, mapping):
     return lemmed_docs
 
 @timer
-def create_posting_list(list_of_words, docs_set):
+def create_posting_list(list_of_tokens, list_of_docs_set):
     docind = []
-    for word in list_of_words:
-        posting_list = [
-            str(ind) for ind, set_of_tokens
-            in enumerate(docs_set, start=1)
-            if word in set_of_tokens
-        ]
-        docind.append((word, ','.join(posting_list), len(posting_list)))
+    dct = {token:[] for token in list_of_tokens}
+    for ind, doc in enumerate(list_of_docs_set, start=1):
+        for token in doc:
+            dct[token].append(str(ind))
+    for token in list_of_tokens:
+        postlist = dct[token]
+        docind.append((token, ','.join(postlist), len(postlist)))
     return docind
 
 @timer
@@ -91,31 +91,6 @@ def count_term_frequences(list_of_tokened_docs):
         counter = Counter(doc)
         for line in counter.items():
             holder.append((ind, *line))
-    return holder
-
-@timer
-def estimate_tfidf(acts_num, words, dct_docind, dct_termfreq):
-    N = acts_num+1
-    dct = {i:array.array('d') for i in range(1, N)}
-    holder = []
-    for ind in range(1, N):
-        for word in words:
-            df = len(dct_docind[word])
-            tfidf = (
-                dct_termfreq[ind][word]
-                * (math.log(N/(1 + df))+ 1)
-            )
-            dct[ind].append(tfidf)
-        if ind % 50 == 0:
-            print(ind)
-    for ind in range(1, N):
-        vect = dct[ind]
-        lnorm = math.sqrt(sum([(inner**2) for inner in vect]))
-        dct[ind] = [
-            coord/lnorm
-            for coord in vect
-        ]
-    holder = [(ind, dct[ind]) for ind in range(1, N)]
     return holder
 
 def create_data_for_db(path_to_folder_with_txt_files,
@@ -151,7 +126,7 @@ def create_data_for_db(path_to_folder_with_txt_files,
         'Word sets formed in',
         '{:.3f} mins'.format((time()-local_timer)/60)
     )
-    
+
     docindraw = create_posting_list(list_of_raw_words, raw_acts_set)
     docindnorm = create_posting_list(list_of_norm_words, norm_acts_set)
 
