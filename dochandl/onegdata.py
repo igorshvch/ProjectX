@@ -27,13 +27,13 @@ def collect_docs(list_of_filepaths):
     return sep_docs
 
 @timer
-def token_docs(list_of_docs, par_len=None):
+def token_docs(list_of_docs, mode, par_len=None):
     if par_len:
         list_of_docs = [
             '\n'.join(par for par in doc.split('\n') if len(par)>par_len)
             for doc in list_of_docs
         ]
-    tokened_docs = [tokenize(doc, mode='hyphen') for doc in list_of_docs]
+    tokened_docs = [tokenize(doc, mode=mode) for doc in list_of_docs]
     return tokened_docs
 
 @timer
@@ -94,6 +94,7 @@ def count_term_frequences(list_of_tokened_docs):
     return holder
 
 def create_data_for_db(path_to_folder_with_txt_files,
+                       norm_mode='ru_alph_zero',
                        par_len=None,
                        path_to_stpw=None):
     dct = {}
@@ -106,7 +107,9 @@ def create_data_for_db(path_to_folder_with_txt_files,
     timer_for_all_files = time()
 
     list_of_docs = collect_docs(list_of_filepaths)
-    list_of_tokened_docs = token_docs(list_of_docs, par_len=par_len)
+    list_of_tokened_docs = token_docs(
+        list_of_docs, mode=norm_mode, par_len=par_len
+    )
     list_of_raw_words = extract_tokens_from_doc_list(
         list_of_tokened_docs,
         path_to_stpw=path_to_stpw

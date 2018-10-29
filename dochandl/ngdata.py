@@ -38,14 +38,14 @@ def collect_and_sep_docs(list_of_filepaths):
     return sep_docs
 
 @timer
-def tokened_docs(list_of_docs, par_len=None):
+def tokened_docs(list_of_docs, mode, par_len=None):
     if par_len:
         list_of_docs = [
             '\n'.join(par for par in doc.split('\n') if len(par)>par_len)
             for doc in list_of_docs
         ]
     list_of_tokened_docs = [
-        tokenize(doc, mode='hyphen') for doc in list_of_docs
+        tokenize(doc, mode=mode) for doc in list_of_docs
     ]
     return list_of_tokened_docs
 
@@ -94,11 +94,11 @@ def lem_docs(list_of_tokened_docs, mapping):
 def create_ngrams_from_tokened_docs(list_of_tokened_docs,
                                     ngram_func=create_bigrams):
     list_of_bigrammed_docs = [
-        ngram_func(doc) for doc in list_of_tokened_docs
+        ngram_func(doc, separator='_') for doc in list_of_tokened_docs
     ]
     return list_of_bigrammed_docs
 
-@time
+@timer
 def create_list_of_docs_set(list_of_tokened_docs):
     list_of_docs_set = [set(doc) for doc in list_of_tokened_docs]
     return list_of_docs_set
@@ -125,6 +125,8 @@ def count_term_frequences(list_of_tokened_docs):
     return holder
 
 def create_data_for_db(path_to_folder_with_txt_files,
+                       norm_mode='ru_alph_zero',
+                       ngram_func=create_bigrams,
                        par_len=None,
                        path_to_stpw=None):
     if path_to_stpw:
@@ -139,32 +141,53 @@ def create_data_for_db(path_to_folder_with_txt_files,
 
     timer_for_all_files = time()
 
-    ##############
-
+    #find docs, separete and tokenise them
     list_of_docs = collect_and_sep_docs(list_of_filepaths)
-    list_of_tokened_docs = tokened_docs(list_of_docs, par_len=par_len)
+    list_of_tokened_docs = tokened_docs(
+        list_of_docs, mode=norm_mode, par_len=par_len
+    )
+
+    #remove stopwords if any passed to the main func
     if path_to_stpw:
         list_of_tokened_docs = clean_tokened_docs_from_stpw(
             list_of_tokened_docs, stpw
         )
+    #create vocabs of unary tokens and lems, create mapping from tokens to lems
     list_of_words = extract_tokens_from_doc_list(list_of_tokened_docs)
     mapping, list_of_lemms = create_lem_mapping_and_evalute_lems(
         list_of_words
     )
     list_of_lemmed_docs = lem_docs(list_of_tokened_docs, mapping)
 
+    #create ngrams
+    list_of_tokened_docs = create_ngrams_from_tokened_docs(
+        list_of_tokened_docs,
+        ngram_func=create_bigrams
+        )
+    list_of_words = extract_tokens_from_doc_list(list_of_tokened_docs)
+    list_of_lemmed_docs  = create_ngrams_from_tokened_docs(
+        list_of_lemmed_docs,
+        ngram_func=create_bigrams
+        )
+    list_of_lemms = extract_tokens_from_doc_list(list_of_lemmed_docs)
 
+    #compute posting lists and ngrams frequencies
+    tokened_docs_set = create_list_of_docs_set(list_of_tokened_docs)
+    lemmed_docs_set = create_list_of_docs_set(list_of_lemmed_docs)
+    tokened_pl = create_posting_list(list_of_words, tokened_docs_set)
+    lemmed_pl = create_posting_list(list_of_lemms, lemmed_docs_set)
+    tokened_tf = count_term_frequences(list_of_tokened_docs) 
+    lemmed_tf = count_term_frequences(list_of_lemmed_docs)
 
-    ##############
-
+    #store valuable information in a dict
     dct['acts'] = [[doc] for doc in list_of_docs]
-    dct['wordraw'] = [[word] for word in list_of_raw_words]
-    dct['wordnorm'] = [[word] for word in list_of_norm_words]
-    dct['wordmapping'] = [i for i in raw_norm_word_map.items()]
-    dct['docindraw'] = docindraw
-    dct['docindnorm'] = docindnorm
-    dct['termfreqraw'] = termfreqraw
-    dct['termfreqnorm'] = termfreqnorm
+    dct['wordraw'] = [[word] for word in list_of_words]
+    dct['wordnorm'] = [[word] for word in list_of_lemms]
+    dct['wordmapping'] = [i for i in mapping.items()]
+    dct['docindraw'] = tokened_pl
+    dct['docindnorm'] = lemmed_pl
+    dct['termfreqraw'] = tokened_tf
+    dct['termfreqnorm'] = lemmed_tf
 
     end_time = time()-timer_for_all_files
     print(
@@ -173,3 +196,26 @@ def create_data_for_db(path_to_folder_with_txt_files,
     )
     
     return dct
+
+def prepare_concl(concl_txt,
+                  path_to_stpw=None,
+                  norm_mode='ru_alph_zero',
+                  ngram_func=create_bigrams):
+    if path_to_stpw:
+        stpw = load_pickle(path_to_stpw)
+    timer_for_all_files = time()
+
+    tokens = tokenize(concl_txt, mode=norm_mode)
+    if path_to_stpw:
+        tokens = [token for token in tokens if token not in stpw]
+    lemms = lemmatize(tokens)
+    tokened_bigrams = create_bigrams(tokens, separator='_')
+    lemmed_bigrams = create_bigrams(lemms, separator='_')
+
+    end_time = time()-timer_for_all_files
+    print(
+        'Concl processed',
+        'in {:.3f} mins ({:.3f} sec)'.format(end_time/60, end_time)
+    )
+    
+    return ' '.join(tokened_bigrams), ' '.join(lemmed_bigrams)
