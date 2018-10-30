@@ -128,17 +128,18 @@ def count_and_store_tfidf_ngrams(con,
             '\n'.join(par for par in act.split('\n') if len(par)>par_len)
             for act in acts_all
         ]
-    normed_acts = (
-        ngram_func(
-            [word for word in tokenize(act) if word not in stpw],
-            separator='_'
+    if mode == 'raw':
+        normed_acts = (
+            ngram_func(
+                [word for word in tokenize(act) if word not in stpw],
+                separator='_'
+            )
+            for act in acts_all
         )
-        for act in acts_all
-    )
-    if mode == 'norm':
+    elif mode == 'norm':
         mapping = load_mapping(con)
         normed_acts = [
-            [word for word in act if word not in stpw]
+            [word for word in tokenize(act) if word not in stpw]
             for act in acts_all
         ]
         normed_acts = [lemmatize_by_map(act, mapping) for act in normed_acts]
@@ -169,6 +170,14 @@ def count_and_store_tfidf_ngrams(con,
         vect = {word:tf_act.get(word, 0) for word in words_all}
         vect = [tfidf_func(df_all[word], tf) for word,tf in vect.items()]
         norm = euclid_norm(vect)
+        #try:
+        #    div_res = [str(val/norm) for val in vect]
+        #except ZeroDivisionError:
+        #    print('Error act: {:0>5d}'.format(counter))
+        #    writer(vect, 'error_vector', mode='w')
+        #    writer(str(norm), 'error_norm', mode='w')
+        #    writer(act, 'error_act', mode='w')
+        #    return 'ERROR!'
         str_vect = ','.join(str(val/norm) for val in vect)
         mtrx.append([str_vect])
     fulfill_tfidf_table(con, mtrx, mode=mode)

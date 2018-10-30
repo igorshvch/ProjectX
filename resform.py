@@ -36,7 +36,8 @@ def default_write_to_file(con,
                           func,
                           mode=None,
                           step=500,
-                          filenameadder=''):
+                          filenameadder='',
+                          concls_to_write=None):
     options ={
         (1,1):lambda con,concl,mode,step: func(con,concl,mode=mode,step=step),
         (1,0):lambda con,concl,mode,step: func(con,concl,mode=mode),
@@ -45,11 +46,7 @@ def default_write_to_file(con,
     }
     from writer import writer
     for ind, concl in enumerate(concls, start=1):
-        holder = [concl, '='*127]
-        #if mode:
-        #    res = func(con, concl, mode=mode, step = step)
-        #else:
-        #    res = func(con, concl, step = step)
+        holder = [concls_to_write[ind-1] if concls_to_write else concl, '='*127]
         res = options[bool(mode), bool(step)](con, concl, mode, step)
         res_s = sorted(res, key=lambda x: x[1], reverse=True)[:5]
         for act_info in res_s:
