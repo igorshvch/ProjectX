@@ -271,18 +271,18 @@ def efficient_cosine_similarity(con, query_text, mode='raw'):
     vect_data = sorted(vect_data, key = lambda x: x[1], reverse=True)[:10]
     base_similarity_condition = [word for word, score in vect_data if len(word)>2]
     while base_similarity_condition:
-        print('{: <6s} : {:d}'.format('BSC', len(base_similarity_condition)))
+        #print('{: <6s} : {:d}'.format('BSC', len(base_similarity_condition)))
         acts_ind = find_all_words(
             con, base_similarity_condition, mode=mode, inden='\t'
         )
         acts_found = len(acts_ind)
-        print('{: <6s} : {:d}'.format('acts_l', acts_found))
+        #print('{: <6s} : {:d}'.format('acts_l', acts_found))
         if acts_found >= 5:
             break
         base_similarity_condition.pop()
         if len(base_similarity_condition) == 2:
             break
-    print(acts_ind)
+    #print(acts_ind)
     for ind in acts_ind:
         #print(ind)
         vector = load_tfidf_vector(con, ind, mode=mode).split(',')

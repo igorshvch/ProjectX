@@ -198,20 +198,21 @@ def find_all_words(connection, query, mode='raw', inden=''):
     else:
         print('Mode error!')
         return None
-    print(inden+'{: <6s} : {}'.format('mode', mode))
-    print(inden+'{: <6s} : {}'.format('table', table))
+    #print(inden+'{: <6s} : {}'.format('mode', mode))
+    #print(inden+'{: <6s} : {}'.format('table', table))
     if isinstance(query, str):
         query = re.split(r'\W', query.lower(), flags=re.DOTALL)
         query = [word for word in query if word]
-        print(
-            inden
-            +'{: <6s} : {}'.format('query', 'transformed to list of tokens')
-        )
+        #print(
+        #    inden
+        #    +'{: <6s} : {}'.format('query', 'transformed to list of tokens')
+        #)
     elif isinstance(query, list):
-        print(
-            inden
-            +'{: <6s} : {}'.format('query', 'passed in as list of tokens')
-        )
+        pass
+        #print(
+        #    inden
+        #    +'{: <6s} : {}'.format('query', 'passed in as list of tokens')
+        #)
     cursor = connection.cursor()
     post_lists = []
     #print('I AM HERE!')
