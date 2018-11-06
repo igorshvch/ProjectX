@@ -22,25 +22,30 @@ PARSER = parser_options[PAR_TYPE]
 
 def tokenize(text, word_len=0, mode='single'):
     patterns = {
-        'single': r'\W',
-        'hyphen': r'[^a-zA-Zа-яА-Я0-9_-]',
-        'ru_single': r'[^а-яА-Я0-9-]',
-        'ru_alph': r'[^а-яА-Я]',
-        'ru_alph_zero': r'[^а-яА-Я0]',
-        'ru_alph_hyphen': r'[^а-яА-Я-]',
-        'ru_alph_hyphen_zero' : r'[^а-яА-Я-0]',
+        'spl_single': r'\W',
+        'spl_hyphen': r'[^a-zA-Zа-яА-Я0-9_-]',
+        'spl_ru_hyphen': r'[^а-яА-Я0-9-]',
+        'spl_ru_alph': r'[^а-яА-Я]',
+        'spl_ru_alph_zero': r'[^а-яА-Я0]',
+        'spl_ru_alph_hyphen': r'[^а-яА-Я-]',
+        'spl_ru_alph_hyphen_zero' : r'[^а-яА-Я-0]',
+        'fal_ru_hyphen' : r'[А-я0-9][А-я0-9-]+'
     }
+    funcs = {
+        'spl': re.split,
+        'fal': re.findall,
+    } 
     text = text.lower().strip()
     if word_len:
         return [
             token for token
-            in re.split(patterns.get(mode, r'\W'), text)
+            in funcs[mode[:3]](patterns.get(mode, r'\W'), text)
             if len(token)>word_len
         ]
     else:
         return [
             token for token
-            in re.split(patterns.get(mode, r'\W'), text)
+            in funcs[mode[:3]](patterns.get(mode, r'\W'), text)
             if token
         ]
 
@@ -56,7 +61,8 @@ def normalize(text, word_len=0):
     text = text.lower().strip()
     if word_len:
         return [
-            local_parser(token) for token in re.split(r'\W', text) if len(token)>word_len
+            local_parser(token) for token
+            in re.split(r'\W', text) if len(token)>word_len
         ]
     else:
         return [local_parser(token) for token in re.split(r'\W', text) if token]
@@ -71,6 +77,18 @@ def change_parser():
         PAR_TYPE = 'parser1'
         PARSER = parser_options[PAR_TYPE]
     print('Parser was changed to {}'.format(PAR_TYPE))
+
+class TokLem():
+    def __init__(self,mapping,stpw):
+        self.tok = tokenize
+        self.lem = lemmatize_by_map
+        self.mapping = mapping
+        self.stpw = stpw
+    def __call__(self, doc):
+        tok_doc = self.tok(doc, mode='fal_ru_hyphen')
+        cleaned_doc = [w for w in tok_doc if w not in self.stpw]
+        return self.lem(cleaned_doc, self.mapping)
+
 
 ###Testing=====================================================================
 if __name__ == '__main__':

@@ -3,8 +3,6 @@ from re import (
 )
 from time import time
 
-__version__ = '0.2.1'
-
 ###Content=====================================================================
 #Patterns
 PATTERN_ACT_CLEAN1 = '-{66}\nКонсультантПлюс.+?-{66}\n'
@@ -19,6 +17,8 @@ PATTERN_PASS1 = (
 PATTERN_PASS2 = (
     'Утвержден\nпрезидиумом Арбитражного суда\nСеверо-Кавказского округа'
 )
+PUNCTUATION = '!"#$%&\'()*+,/:;<=>?@[\\]^`{|}~_'
+
 
 #Funcs
 def court_decisions_cleaner(text, inden=''):
@@ -48,25 +48,34 @@ def court_decisions_separator(text, sep_type='sep1', inden=''):
     )
     return separated_acts
 
+def sentence_separator(text, sep_type='sep1', inden='', sub_table=None):
+    separated_acts = court_decisions_separator(
+        text, sep_type=sep_type, inden=inden
+    )
+    text = '\n'.join(separated_acts)
+    for key in sub_table:
+        text = text.replace(key, sub_table[key])
+    text = subn(r'\b[А-Я]\.[А-Я]*\.*', '', text)[0]
+    text = subn(r'[%s]'%PUNCTUATION, '', text)[0]
+    text = subn(r'\b[0-9]{1,2}\.[0-9]{2}\.[0-9]{2,4}', '', text)[0]
+    text = subn(r' {2,}', ' ', text)[0]
+    pre_sents = text.lower().split('.')
+    sentences = []
+    for pre_s in pre_sents:
+        spl_s = pre_s.split('\n')
+        for sent in spl_s:
+            if len(sent) > 74:
+                sentences.append(sent.strip())
+    return sentences
+
 def separate_text(text,
                   inden='',
                   clean_func=court_decisions_cleaner,
-                  sep_func=court_decisions_separator):
-    return sep_func(clean_func(text, inden=inden), inden=inden)
+                  sep_func=court_decisions_separator,
+                  **kwargs):
+    return sep_func(clean_func(text, inden=inden), inden=inden, **kwargs)
     
 
 ###Testing=====================================================================
 if __name__ == '__main__':
-    import sys
-    try:
-        sys.argv[1]
-        if sys.argv[1] == '-v':
-            print('Module name: {}'.format(sys.argv[0]))
-            print('Version info:', __version__)
-        elif sys.argv[1] == '-t':
-            print('Testing mode!')
-            print('Not implemented!')
-        else:
-            print('Not implemented!')
-    except IndexError:
-        print('Mode var wasn\'t passed!')
+    print('Not implemented!')
