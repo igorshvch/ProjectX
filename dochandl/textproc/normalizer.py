@@ -20,7 +20,7 @@ PAR_TYPE = 'parser1'
 PARSER = parser_options[PAR_TYPE]
 #==============================================================================
 
-def tokenize(text, word_len=0, mode='single'):
+def tokenize(text, word_len=0, mode='spl_single'):
     patterns = {
         'spl_single': r'\W',
         'spl_hyphen': r'[^a-zA-Zа-яА-Я0-9_-]',

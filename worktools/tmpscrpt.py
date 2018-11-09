@@ -48,10 +48,10 @@ def txt_concls_to_dct(folder_path):
 def transform_dct_to_txt(dct, cnl_dct, b=0.15, acts=5):
     from writer import writer
     options = {
-        '2018-10-31__efficient_cosine_similarity_RAW_BIGRAM_': 'RB',
-        '2018-10-31__efficient_cosine_similarity_RAW__': 'R',
-        '2018-10-31__efficient_cosine_similarity_NORM_BIGRAM_': 'NB',
-        '2018-10-31__efficient_cosine_similarity_NORM__': 'N'
+        '2018-11-09__efficient_cosine_similarity_RAW_BIGRAMS_': 'RB',
+        '2018-11-09__efficient_cosine_similarity_RAW__': 'R',
+        '2018-11-09__efficient_cosine_similarity_NORM_BIGRAMS_': 'NB',
+        '2018-11-09__efficient_cosine_similarity_NORM__': 'N'
     }
     for key in sorted(dct.keys()):
         holder = [cnl_dct[key]]
@@ -85,6 +85,13 @@ def count_acts(folder_path):
         spl = text.split('\n')
         counter += len(spl[2:])
     return counter
+
+def find_similars(st):
+    spl = st.split('\n')
+    spl = set([row[:91].rstrip(' ') for row in spl])
+    print(len(spl))
+    for i in spl: print(i)
+    return spl
 
 
 

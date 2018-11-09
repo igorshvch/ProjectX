@@ -232,6 +232,15 @@ def estimate_query_vect(con, query_text, mode='raw'):
     vect = [c/norm for c in vect]
     return vect
 
+def estimate_query_words_idfs_only(con, query_text, mode='raw'):
+    df = load_all_doc_freq(con, mode=mode)
+    N = load_num_of_docs(con)
+    query_text = set(tokenize(query_text))
+    if mode == 'norm':
+        query_text = lemmatize(query_text)
+    vect = [(word, math.log(N/df.get(word, 0))) for word in query_text]
+    return sorted(vect, key=lambda x: x[1], reverse=True)
+
 def cosine_similarity(con, query_vect, mode='raw', step=100):
     if mode == 'raw':
         table='tfidfraw'

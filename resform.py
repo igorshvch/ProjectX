@@ -1,7 +1,8 @@
 from writer import writer
 from tfidf import (
     overlap_score_measure,
-    estimate_query_vect
+    estimate_query_vect,
+    estimate_query_words_idfs_only
 )
 from db import load_all_words
 
@@ -112,3 +113,18 @@ def concl_words_tfidf_score(con,
         words = [word for word, score in vect_data][:10]
         words = [word for word in words if len(word)>2]
         print ('CONCL {:0>5d}'.format(filenameadder), ', '.join(words))
+
+
+def concl_words_idf_score(con, concl, mode='raw', filenameadder=None):
+    vect = estimate_query_words_idfs_only(con, concl, mode=mode)
+    holder = [concl]
+    holder.append('='*96)
+    for word, idf in vect:
+        st = '{:.<45s} --> {:<10f}'
+        st = st.format(word, idf)
+        holder.append(st)
+    writer(
+        holder,
+        'vect_IDF_{}_{}'.format(mode.upper(), filenameadder),
+        mode='w'
+    )

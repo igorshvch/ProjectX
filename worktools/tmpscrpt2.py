@@ -16,7 +16,7 @@ SUB_TABLE = {
 }
 
 @timer
-def f1(list_of_filepaths):
+def split_to_sentences(list_of_filepaths):
     sep = []
     for path in list_of_filepaths:
         sep+=separate_text(
