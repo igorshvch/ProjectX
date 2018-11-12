@@ -29,7 +29,7 @@ def tokenize(text, word_len=0, mode='spl_single'):
         'spl_ru_alph_zero': r'[^а-яА-Я0]',
         'spl_ru_alph_hyphen': r'[^а-яА-Я-]',
         'spl_ru_alph_hyphen_zero' : r'[^а-яА-Я-0]',
-        'fal_ru_hyphen' : r'[А-я0-9][А-я0-9-]+'
+        'fal_ru_hyphen' : r'\b[А-я0-9][А-я0-9-]*?'
     }
     funcs = {
         'spl': re.split,

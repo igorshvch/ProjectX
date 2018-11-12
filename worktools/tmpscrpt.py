@@ -88,7 +88,7 @@ def count_acts(folder_path):
 
 def find_similars(st):
     spl = st.split('\n')
-    spl = set([row[:91].rstrip(' ') for row in spl])
+    spl = set([row[:91].rstrip(' ') for row in spl if row])
     print(len(spl))
     for i in spl: print(i)
     return spl
