@@ -4,15 +4,15 @@ from collections import Counter
 from time import time
 
 from debugger import timer_with_func_name as timer
-from .textproc  import (
+from textproc  import (
     collect_exist_files,
     read_text,
     load_pickle
 )
-from .textproc.textsep import (
+from textproc.textsep import (
     separate_text
 )
-from .textproc.normalizer import (
+from textproc.normalizer import (
     PARSER,
     tokenize,
     lemmatize_by_map

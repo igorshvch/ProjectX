@@ -5,7 +5,7 @@ from collections import Counter
 from time import time
 
 from debugger import timer_with_func_name as timer
-from .textproc.rwtools import (
+from textproc.rwtools import (
     collect_exist_files,
     collect_exist_dirs,
     collect_exist_files_and_dirs,
@@ -13,17 +13,17 @@ from .textproc.rwtools import (
     save_obj,
     load_pickle
 )
-from .textproc.textsep import (
+from textproc.textsep import (
     separate_text
 )
-from .textproc.normalizer import (
+from textproc.normalizer import (
     PARSER,
     tokenize,
     lemmatize,
     normalize,
     lemmatize_by_map
 )
-from .textproc.texttools import (
+from textproc.texttools import (
     clean_txt_and_remove_stpw,
     create_bigrams
 )

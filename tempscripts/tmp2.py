@@ -1,5 +1,5 @@
 from dochandl.ngdata import *
-from dochandl.textproc import textsep
+from textproc import textsep
 
 SUB_TABLE = {
     'п.': 'пункт',

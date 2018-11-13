@@ -1,4 +1,4 @@
-from dochandl.textproc import rwtools
+from textproc import rwtools
 
 def transmute(item, st):
     lst = [i.strip() for i in item.split('|')]

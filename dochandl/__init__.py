@@ -5,4 +5,4 @@ from .ngdata import (
     prepare_concl
 )
 
-from .textproc import *
+from textproc import *
