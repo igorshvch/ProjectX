@@ -7,7 +7,7 @@ def timer(func):
         res = func(*args, **kwargs)
         end_time = time() - local_timer
         print(
-            'TIME: {:.3f} min ({:.3f} sec)'.format(
+            'TIME: {: >9.4f} min ({: >9.4f} sec)'.format(
                 end_time/60, end_time
             )
         )
@@ -19,12 +19,12 @@ def timer_with_func_name(func):
     def wrapper(*args, **kwargs):
         local_timer = time()
         print('-'*69)
-        print('===========>DO: {:.>53}'.format(func.__name__))
+        print('===========>DO: {:.>53s}'.format(func.__name__))
         res = func(*args, **kwargs)
-        print('======>COMLETE: {:.>53}'.format(func.__name__))
+        print('======>COMLETE: {:.>53s}'.format(func.__name__))
         end_time = time() - local_timer
         print(
-            '=========>TIME: {:.3f} min ({:.3f} sec)'.format(
+            '=========>TIME: {: >9.4f} min ({: >9.4f} sec)'.format(
                 end_time/60, end_time
             )
         )
@@ -42,7 +42,7 @@ def timer_message(stmt):
             print('======>COMLETE: {}'.format(stmt))
             end_time = time() - local_timer
             print(
-                '=========>TIME: {:.3f} min ({:.3f} sec)'.format(
+                '=========>TIME: {: >9.4f} min ({: >9.4f} sec)'.format(
                     end_time/60, end_time
                 )
             )

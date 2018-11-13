@@ -1,9 +1,31 @@
 import pickle
 import itertools
-from collection import Counter
+from collections import Counter
 
-class Processor(pickle.Pickler):
-    def __init__(self, input_paths, output_path):
-        pickle.Pickler.__init__(self, *args, **kwargs)
-        self.input_paths = input_paths
-        self.output_paths = output_paths
+from debugger import timer
+
+class IOPickler():
+    def __init__(self, file):
+        self.file = file
+    
+    @timer
+    def write(self, data_iterable, **kwargs):
+        if self.file.closed:
+            return 'File is closed!'
+        self.file.seek(0)
+        pick = pickle.Pickler(self.file, **kwargs)
+        for item in data_iterable:
+            pick.dump(item)
+    
+    def load_item(self, pos=0, **kwargs):
+        if self.file.closed:
+            return 'File is closed!'
+        self.file.seek(pos)
+        unpick = pickle.Unpickler(self.file, **kwargs)
+        error = False
+        while not error:
+            try:
+                item = unpick.load()
+                yield item
+            except:
+                error = True
