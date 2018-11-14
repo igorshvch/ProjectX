@@ -1,6 +1,8 @@
 from time import time
+import functools
 
 def timer(func):
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         local_timer = time()
         print('-'*69)
@@ -16,6 +18,7 @@ def timer(func):
     return wrapper
 
 def timer_with_func_name(func):
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         local_timer = time()
         print('-'*69)
@@ -34,6 +37,7 @@ def timer_with_func_name(func):
 
 def timer_message(stmt):
     def decorator(func):
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             local_timer = time()
             print('-'*69)

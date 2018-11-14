@@ -31,7 +31,7 @@ def court_decisions_cleaner(text, inden=''):
     print('{}Acts were cleaned in {:->3.5f} seconds'.format(inden, time()-t0))
     return cleaned_text3[1:-68]
 
-def court_decisions_separator(text, sep_type='sep1', inden='', mode='ret'):
+def court_decisions_separator(text, sep_type='sep1', inden=''):
     t0 = time()
     if sep_type=='sep1':
         separated_acts = split(PATTERN_ACT_SEP1, text)
@@ -46,12 +46,7 @@ def court_decisions_separator(text, sep_type='sep1', inden='', mode='ret'):
         '{}Acts were separated in {:->3.5f} seconds,'.format(inden, time()-t0),
         '{} acts were found'.format(len(separated_acts))
     )
-    if mode=='ret':
-        return separated_acts
-    elif mode=='gen':
-        yield separated_acts
-    else:
-        raise ValueError('Incorrect mode kwarg: {}'.format(mode))
+    return separated_acts
 
 def sentence_separator(text, sep_type='sep1', inden='', sub_table=None):
     separated_acts = court_decisions_separator(
