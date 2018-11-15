@@ -29,7 +29,9 @@ def tokenize(text, word_len=0, mode='spl_single'):
         'spl_ru_alph_zero': r'[^а-яА-Я0]',
         'spl_ru_alph_hyphen': r'[^а-яА-Я-]',
         'spl_ru_alph_hyphen_zero' : r'[^а-яА-Я-0]',
-        'fal_ru_hyphen' : r'\b[А-я0-9][А-я0-9-]*'
+        'fal_ru_hyphen' : r'\b[А-я0-9][А-я0-9-]*',
+        'fal_ru_alph_hyphen' : r'\b[А-я][А-я-]*',
+        'fal_ru_alph_hyphen_zero' : r'\b[А-я0][А-я0-]*'
     }
     funcs = {
         'spl': re.split,
@@ -79,15 +81,20 @@ def change_parser():
     print('Parser was changed to {}'.format(PAR_TYPE))
 
 class TokLem():
-    def __init__(self,mapping,stpw):
+    def __init__(self, stpw, mapping='raw', mode='fal_ru_hyphen'):
         self.tok = tokenize
         self.lem = lemmatize_by_map
         self.mapping = mapping
         self.stpw = stpw
+        self.mode = mode
     def __call__(self, doc):
-        tok_doc = self.tok(doc, mode='fal_ru_hyphen')
-        cleaned_doc = [w for w in tok_doc if w not in self.stpw]
-        return self.lem(cleaned_doc, self.mapping)
+        tok_doc = self.tok(doc, mode=self.mode)
+        if self.mapping == 'raw':
+            cleaned_doc = [w for w in tok_doc if w not in self.stpw]
+            return cleaned_doc
+        else:
+            cleaned_doc = self.lem(tok_doc, self.mapping)
+            return [w for w in cleaned_doc if w not in self.stpw]
 
 
 ###Testing=====================================================================

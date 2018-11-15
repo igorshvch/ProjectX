@@ -2,11 +2,15 @@ import pickle
 import functools
 import math
 from collections import Counter
+from time import time
 
-from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+import scipy.sparse
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 from debugger import timer
 from textproc.normalizer import TokLem
+from textproc import rwtools
 
 class IOPickler():
     def __init__(self, file):
@@ -122,61 +126,248 @@ def flags_changer(key):
         return wrapper
     return decorator
 
+class TestFlagsChanger():
+    def __init__(self):
+        self.flags = {
+            'tfidf':False,
+            'tokenizer':False,
+            'weighttable':False
+        }
+    @flags_changer('tfidf')
+    def tfidf(self):
+        print('Flag \'tfidf\' status: {}'.format(self.flags['tfidf']))
+    @flags_changer('tokenizer')
+    def tokenizer(self):
+        print('Flag \'tokenizer\' status: {}'.format(self.flags['tokenizer']))
+    @flags_changer('weighttable')
+    def weighttable(self):
+        print('Flag \'weighttable\' status: {}'.format(self.flags['weighttable']))
+    def reset_flags(self):
+        self.flags = {key:False for key in self.flags}
+
 class Indexer():
-    def __init__(self, lem_map, stpw):
-        self.lem_map = lem_map
-        self.stpw = stpw
+    def __init__(self):
         self.TL = None
         self.tfv = None
+        self.cnt_v = None
+        self.iopickler = None
         self.mtrx = None
-        self.df_dct = {}
+        self.N = None
+        self.poses = {}
+        self.df = None
         self.flags ={
             'tfidf' : False,
             'tokenizer' : False,
-            'tfidfmatrix' : False
+            'weighttable' : False,
+            'all_df' : False,
+            'poses' : False
         }
     
     def _reset_flags(self):
         self.flags = {key:False for key in self.flags}
+    
+    def reset_state(self):
+        self.TL = None
+        self.tfv = None
+        self.cnt_v = None
+        self.iopickler = None
+        self.mtrx = None
+        self.N = None
+        self.poses = {}
+        self.df = None
+        self._reset_flags()
 
     @flags_changer('tokenizer')
-    def init_tokenizer(self):
-        self.TL = TokLem(self.lem_map, self.stpw)
+    def init_tokenizer(self, stpw, mapping, mode='fal_ru_hyphen'):
+        r'''
+        tokenization patterns (modes):
+        'spl_single': r'\W',
+        'spl_hyphen': r'[^a-zA-Zа-яА-Я0-9_-]',
+        'spl_ru_hyphen': r'[^а-яА-Я0-9-]',
+        'spl_ru_alph': r'[^а-яА-Я]',
+        'spl_ru_alph_zero': r'[^а-яА-Я0]',
+        'spl_ru_alph_hyphen': r'[^а-яА-Я-]',
+        'spl_ru_alph_hyphen_zero' : r'[^а-яА-Я-0]',
+        'fal_ru_hyphen' : r'\b[А-я0-9][А-я0-9-]*'
+        '''
+        self.TL = TokLem(stpw, mapping=mapping, mode=mode)
     
     @flags_changer('tfidf')
-    def init_tfv(self, token_pattern=r'(?u)\b\w\w+\b'):
+    def init_vectorizers(self, ngram_range=(1,1)):
+        if not self.flags['tokenizer']:
+            return 'Tokenizer is not initialized'
         self.tfv = TfidfVectorizer(
             tokenizer=self.TL,
-            token_pattern=token_pattern
+            ngram_range=ngram_range
+        )
+        self.cnt_v = CountVectorizer(
+            binary = True,
+            tokenizer=self.TL,
+            ngram_range=ngram_range
         )
     
-    @flags_changer('tfidfmatrix')
+    @flags_changer('weighttable')
     def init_tfidf_table(self, doc_iter):
         if not self.flags['tfidf']:
             return 'Tfidf Vectorizer is not initialized'
         self.mtrx = self.tfv.fit_transform(doc_iter)
+        self.N = self.mtrx.shape[0]
+        self.N_words = self.mtrx.shape[1]
     
-    def estimate_tfidf(self, text_string):
-        if not self.flags['tfidfmatrix']:
-            return 'Tfidf indicies are not estimated'
-        return self.tfv.transform([text_string])
+    @flags_changer('all_df')
+    def create_df_index(self, doc_iter):
+        cnt_mtrx = self.cnt_v.fit_transform(doc_iter)
+        self.cnt_v = None
+        sum_vect = cnt_mtrx.sum(axis=0, dtype=int)
+        self.df = np.squeeze(np.asarray(sum_vect))
     
+    @flags_changer('poses')
     def create_pos_index(self):
-        if not self.flags['tfidfmatrix']:
-            return 'Tfidf indicies are not estimated'
+        if not self.flags['weighttable']:
+            return 'Tfidf indices are not estimated'
         self.poses = {ind:word for word,ind in self.tfv.vocabulary_.items()}
     
-    def count_docfreq(self, word):
-        if not self.flags['tfidfmatrix']:
-            return 'Tfidf indicies are not estimated'
-        pos = self.tfv.vocabulary_.get(word, None)
-        if not pos:
-            return 'Word is not in vocabulary!'
-        vect = self.mtrx[:,pos]
+    def init_model(self,
+                   iopickler_obj,
+                   stpw,
+                   mapping,
+                   mode='fal_ru_hyphen',
+                   ngram_range=(1,1)):
+        self.iopickler = iopickler_obj
+        local_time = time()
+        self.init_tokenizer(stpw, mapping, mode=mode)
+        print(
+            '{:-<17s} : {:_>7.3f} min ({:_>8.3f} sec)'.format(
+                'init_tokenizer', (time()-local_time)/60, time()-local_time
+            )
+        )
+        self.init_vectorizers(ngram_range=ngram_range)
+        print(
+            '{:-<17s} : {:_>7.3f} min ({:_>8.3f} sec)'.format(
+                'init_vectorizers', (time()-local_time)/60, time()-local_time
+            )
+        )
+        self.init_tfidf_table(iopickler_obj.load_all_items())
+        print(
+            '{:-<17s} : {:_>7.3f} min ({:_>8.3f} sec)'.format(
+                'init_tfidf_table', (time()-local_time)/60, time()-local_time
+            )
+        )
+        self.create_df_index(iopickler_obj.load_all_items())
+        print(
+            '{:-<17s} : {:_>7.3f} min ({:_>8.3f} sec)'.format(
+                'create_df_index', (time()-local_time)/60, time()-local_time
+            )
+        )
+        self.create_pos_index()
+        print(
+            '{:-<17s} : {:_>7.3f} min ({:_>8.3f} sec)'.format(
+                'create_pos_index', (time()-local_time)/60, time()-local_time
+            )
+        )
+    
+    def _query_find_word_positions(self, text_string, method='tfidf'):
+        if not self.flags['poses']:
+            return 'Poses index is not created!'
+        if not self.flags['weighttable'] and method == 'tfidf':
+            return 'Tfidf indices are not estimated!'
+        if not self.flags['all_df'] and (method == 'df' or method == 'idf'):
+            return 'Docfreq indices are not estimated!'
+        vect = self.tfv.transform([text_string])
         vect = vect.toarray().flatten()
-        df = sum(1 for i in vect if i)
-        self.df_dct[word] = df
-        print('{:-<50s} : df : {:.>5d}'.format(word, df))
+        if method == 'tfidf':
+            return zip(np.nonzero(vect)[0], vect[np.nonzero(vect)])
+        if method == 'df' or method == 'idf':
+            return np.nonzero(vect)[0]
+    
+    def query_find_most_valuable_words(self,
+                                       text_string,
+                                       words_quant=10,
+                                       method='tfidf'):
+        res = self._query_find_word_positions(text_string, method=method)
+        if isinstance(res, str):
+            return res
+        if method == 'tfidf':
+            vect = [(self.poses[ind], score) for ind,score in res]
+        elif method == 'df':
+            vect = [(self.poses[ind], self.df[ind]) for ind in res]
+        elif method == 'idf':
+            vect = [
+                (self.poses[ind], math.log(self.N/self.df[ind]))
+                for ind in res
+            ]
+        words_quant = words_quant if len(vect) > words_quant else -1
+        reverse = True if method != 'df' else False
+        if words_quant == -1:
+            return sorted(vect, key=lambda x : x[1], reverse=reverse)
+        else:
+            return sorted(
+                vect, key=lambda x : x[1], reverse=reverse
+            )[:words_quant]
+    
+    def query_find_similar_acts(self, text_string, border=(3,3), words_quant=10):
+        query_vect = self.tfv.transform([text_string])
+        key_words = self.query_find_most_valuable_words(
+            text_string, words_quant=words_quant, method='tfidf'
+        )
+        key_words_indices = [
+            self.tfv.vocabulary_[word] 
+            for word, score in key_words
+        ]
+        doc_ind_holder = []
+        for index in key_words_indices:
+            vect = self.mtrx[:,index].toarray().flatten()
+            doc_ind_holder.append(
+                set(np.nonzero(vect)[0])
+            )
+        while True:
+            res_indices = doc_ind_holder[0].intersection(*doc_ind_holder[1:])
+            len_res_indices = len(res_indices)
+            if len_res_indices >= border[1]:
+                break
+            doc_ind_holder.pop()
+            if len(doc_ind_holder) == border[0]:
+                break
+        if not res_indices:
+            return 'Search finished without results!'
+        vectors = [
+            (ind, self.mtrx[ind,:].toarray().flatten())
+            for ind in res_indices
+        ]
+        scores = [(ind, sum(query_vect*vect)) for ind, vect in vectors]
+        scores = sorted(scores, key=lambda x: x[1], reverse=True)
+        res_holder = []
+        for item in scores:
+            ind, score = item
+            doc = self.iopickler[ind].split('\n')
+            req = doc[0] + ' ' + doc[3]
+            res_holder.append((req, score, ind))
+        return res_holder
+    
+    def save_model(self, folder_path):
+        rwtools.save_obj(self.TL, 'TL.model', folder_path)
+        rwtools.save_obj(self.tfv, 'tfv.model', folder_path)
+        rwtools.save_obj(self.cnt_v, 'cnt_v.model', folder_path)
+        scipy.sparse.save_npz(folder_path+r'\mtrx.npz', self.mtrx)
+        rwtools.save_obj(self.N, 'N.model', folder_path)
+        rwtools.save_obj(self.poses, 'poses.model', folder_path)
+        rwtools.save_obj(self.df, 'df.model', folder_path)
+        rwtools.save_obj(self.flags, 'flags.model', folder_path)
+    
+    def load_model(self, folder_path):
+        self.reset_state()
+        self.TL = rwtools.load_pickle(folder_path+r'\TL.model')
+        self.tfv = rwtools.load_pickle(folder_path+r'\tfv.model')
+        self.cnt_v = rwtools.load_pickle(folder_path+r'\cnt_v.model')
+        self.mtrx = scipy.sparse.load_npz(folder_path+r'\mtrx.npz')
+        self.N = rwtools.load_pickle(folder_path+r'\N.model')
+        self.poses = rwtools.load_pickle(folder_path+r'\poses.model')
+        self.df = rwtools.load_pickle(folder_path+r'\df.model')
+        self.flags = rwtools.load_pickle(folder_path+r'\flags.model')
+
+
+
+
 
 
         
