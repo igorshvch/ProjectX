@@ -81,20 +81,19 @@ def change_parser():
     print('Parser was changed to {}'.format(PAR_TYPE))
 
 class TokLem():
-    def __init__(self, stpw, mapping='raw', mode='fal_ru_hyphen'):
+    def __init__(self, stpw, lem_mapping=None, mode='fal_ru_hyphen'):
         self.tok = tokenize
         self.lem = lemmatize_by_map
-        self.mapping = mapping
+        self.lem_mapping = lem_mapping
         self.stpw = stpw
         self.mode = mode
     def __call__(self, doc):
         tok_doc = self.tok(doc, mode=self.mode)
-        if self.mapping == 'raw':
-            cleaned_doc = [w for w in tok_doc if w not in self.stpw]
-            return cleaned_doc
-        else:
-            cleaned_doc = self.lem(tok_doc, self.mapping)
+        if self.lem_mapping:
+            cleaned_doc = self.lem(tok_doc, self.lem_mapping)
             return [w for w in cleaned_doc if w not in self.stpw]
+        else:
+            return [w for w in tok_doc if w not in self.stpw]
 
 
 ###Testing=====================================================================

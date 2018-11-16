@@ -93,6 +93,13 @@ def find_similars(st):
     for i in spl: print(i)
     return spl
 
+def find_similars2(st):
+    import re
+    st = st.replace('"', '')
+    reqs = set(re.findall(r'\bот .*', st))
+    print(len(reqs))
+    return reqs
+
 
 
             

@@ -178,7 +178,7 @@ class Indexer():
         self._reset_flags()
 
     @flags_changer('tokenizer')
-    def init_tokenizer(self, stpw, mapping, mode='fal_ru_hyphen'):
+    def init_tokenizer(self, stpw, lem_mapping, mode='fal_ru_hyphen'):
         r'''
         tokenization patterns (modes):
         'spl_single': r'\W',
@@ -190,7 +190,7 @@ class Indexer():
         'spl_ru_alph_hyphen_zero' : r'[^а-яА-Я-0]',
         'fal_ru_hyphen' : r'\b[А-я0-9][А-я0-9-]*'
         '''
-        self.TL = TokLem(stpw, mapping=mapping, mode=mode)
+        self.TL = TokLem(stpw, lem_mapping=lem_mapping, mode=mode)
     
     @flags_changer('tfidf')
     def init_vectorizers(self, ngram_range=(1,1)):
@@ -230,12 +230,12 @@ class Indexer():
     def init_model(self,
                    iopickler_obj,
                    stpw,
-                   mapping,
+                   lem_mapping=None,
                    mode='fal_ru_hyphen',
                    ngram_range=(1,1)):
         self.iopickler = iopickler_obj
         local_time = time()
-        self.init_tokenizer(stpw, mapping, mode=mode)
+        self.init_tokenizer(stpw, lem_mapping, mode=mode)
         print(
             '{:-<17s} : {:_>7.3f} min ({:_>8.3f} sec)'.format(
                 'init_tokenizer', (time()-local_time)/60, time()-local_time
@@ -265,6 +265,17 @@ class Indexer():
                 'create_pos_index', (time()-local_time)/60, time()-local_time
             )
         )
+    
+    def _define_used_alg(self):
+        options = {
+            (1, 1) : 'NB',
+            (0, 1) : 'RB',
+            (1, 0) : 'N',
+            (0, 0) : 'R'
+        }
+        val1 = 0 if self.TL.lem_mapping == 'raw' else bool(self.TL.lem_mapping)
+        val2 = 1 if self.tfv.ngram_range == (2,2) else 0
+        return options[(val1, val2)]
     
     def _query_find_word_positions(self, text_string, method='tfidf'):
         if not self.flags['poses']:
@@ -306,6 +317,7 @@ class Indexer():
             )[:words_quant]
     
     def query_find_similar_acts(self, text_string, border=(3,3), words_quant=10):
+        alg_mark = self._define_used_alg()
         query_vect = self.tfv.transform([text_string])
         key_words = self.query_find_most_valuable_words(
             text_string, words_quant=words_quant, method='tfidf'
@@ -341,7 +353,7 @@ class Indexer():
             ind, score = item
             doc = self.iopickler[ind].split('\n')
             req = doc[0] + ' ' + doc[3]
-            res_holder.append((req, score, ind))
+            res_holder.append((req, score, alg_mark, ind))
         return res_holder
     
     def save_model(self, folder_path):
@@ -365,10 +377,85 @@ class Indexer():
         self.df = rwtools.load_pickle(folder_path+r'\df.model')
         self.flags = rwtools.load_pickle(folder_path+r'\flags.model')
 
+class ResultsCompiler():
+    def __init__(self):
+        self.res_store = {}
+        self.concls = []
+        
+    def add_results(self, results, concl):
+        if concl not in self.res_store:
+            self.concls.append(concl)
+            res_dct = self._convert_to_dct(results)
+        else:
+            res_dct = self._combine_two_res(results, concl)
+        self.res_store[concl] = res_dct
+    
+    def retrive_results(self, concl=None):
+        if concl:
+            if concl in self.res_store:
+                res_dct = self.res_store[concl]
+                res_list = [
+                    (req, attrs['score'], attrs['alg'], attrs['pos'])
+                    for req, attrs in res_dct.items()
+                ]
+                res_list = sorted(res_list, key=lambda x: x[1], reverse=True)
+                return res_list
+            else:
+                return 'Conclusion was not processed!'
+        else:
+            res_dct = {}
+            for concl in self.concls:
+                dct = self.res_store[concl]
+                res_list = [
+                    (req, attrs['score'], attrs['alg'], attrs['pos'])
+                    for req, attrs in dct.items()
+                ]
+                res_list = sorted(res_list, key=lambda x: x[1], reverse=True)
+                res_dct[concl] = res_list
+            return res_dct
 
+    def _convert_to_dct(self, results):
+        dct = {
+            req:{'score':score, 'alg':alg_mark, 'pos':pos}
+            for req, score, alg_mark, pos in results
+        }
+        return dct
 
+    def _combine_two_res(self, results, concl):
+        res_base_dct = self.res_store[concl]
+        for item in results:
+            req, score, alg_mark, pos = item
+            if req in res_base_dct:
+                res_base_dct[req]['score']+=score
+                res_base_dct[req]['alg']+=alg_mark
+            else:
+                res_base_dct[req] = {
+                    'score':score, 'alg':alg_mark, 'pos':pos
+                }
+        return res_base_dct
+    
+    def reset_state(self):
+        self.res_store = {}
+        self.concls = []
+    
+def f2(cnl28, Indexer, rc):
+    for ind, cnl in enumerate(cnl28):
+        res = Indexer.query_find_similar_acts(cnl, border=(2,3))
+        if isinstance(res, str):
+            print('# {: >2d}'.format(ind), res)
+            continue
+        rc.add_results(res, cnl)
 
-
+def write_it(cnls, RC):
+    from writer import writer
+    for ind, cnl in enumerate(cnls):
+        holder = [cnl]
+        holder.append('='*150)
+        for res in RC.retrive_results(cnl)[:5]:
+            st = '{:-<90s} || SC: {: >7.5f} || AL: {: >6s} || POS: {: >5d}'
+            st = st.format(*res)
+            holder.append(st)
+        writer(holder, 'psp_cnl_{:0>3d}'.format(ind), mode='w', verbose=False)
 
         
         
