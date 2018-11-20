@@ -440,6 +440,7 @@ class ResultsCompiler():
     
 def f2(cnl28, Indexer, rc):
     for ind, cnl in enumerate(cnl28):
+        cnl = cnl.strip()
         res = Indexer.query_find_similar_acts(cnl, border=(2,3))
         if isinstance(res, str):
             print('# {: >2d}'.format(ind), res)
@@ -449,9 +450,15 @@ def f2(cnl28, Indexer, rc):
 def write_it(cnls, RC):
     from writer import writer
     for ind, cnl in enumerate(cnls):
+        cnl = cnl.strip()
         holder = [cnl]
         holder.append('='*150)
         for res in RC.retrive_results(cnl)[:5]:
+            if isinstance(res, str):
+                print('IND #', ind, res)
+                holder.append('Подходящих актов не найдено!')
+                writer(holder, 'psp_cnl_{:0>3d}'.format(ind), mode='w', verbose=False)
+                break
             st = '{:-<90s} || SC: {: >7.5f} || AL: {: >6s} || POS: {: >5d}'
             st = st.format(*res)
             holder.append(st)
