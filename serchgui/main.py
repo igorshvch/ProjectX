@@ -1,0 +1,55 @@
+from tkinter import *
+from tkinter import ttk
+
+def f2():
+    old_settings = 'Использовать старые настройки'
+    root = Tk()
+    menubar = Menu(root, name='О программе')
+    menu_file = Menu(menubar)
+    menubar.add_cascade(menu=menu_file, label='О программе')
+    root['menu'] = menubar
+    content = ttk.Frame(root)
+    label11 = ttk.Label(root, text='Выберите данные')
+    label12 = ttk.Label(root, text='Fill by context')
+    label21 = ttk.Label(root, text='Выберите интервал')
+    label22 = ttk.Label(root, text='Fill by context')
+    lable31 = ttk.Label(root, text='Выберите выводы')
+    label32 = ttk.Label(root, text='Fill by context')
+    label41 = ttk.Label(root, text='Выберите папку для записи результатов')
+    label42 = ttk.Label(root, text='Fill by context')
+    labelTask = ttk.Label(root, text='Fill by context')
+    button11 = ttk.Button(root, text='Выбрать')
+    button12 = ttk.Button(root, text=old_settings)
+    button31 = ttk.Button(root, text='Подгрузить выводы')
+    button32 = ttk.Button(root, text=old_settings)
+    button41 = ttk.Button(root, text='Выбрать')
+    button42 = ttk.Button(root, text=old_settings)
+    buttonStart = ttk.Button(root, text='Найти акты!')
+    data_entry21 = ttk.Entry(root)
+    data_entry22 = ttk.Entry(root)
+    scrollbox31 = Listbox(root)
+    
+    content.grid(column=0, row=0)
+    label11.grid(column=0, row=0)
+    label12.grid(column=0, row=4)
+    label21.grid(column=1, row=0)
+    label22.grid(column=1, row=4)
+    lable31.grid(column=2, row=0)
+    label32.grid(column=2, row=4)
+    label41.grid(column=3, row=0)
+    label42.grid(column=3, row=4)
+    labelTask.grid(column=0, row=7)
+    
+    button11.grid(column=0, row=1)
+    button12.grid(column=0, row=2)
+    button31.grid(column=2, row=1)
+    button32.grid(column=2, row=2)
+    button41.grid(column=3, row=1)
+    button42.grid(column=3, row=2)
+    buttonStart.grid(column=3, row=6)
+    
+    data_entry21.grid(column=1, row=1)
+    data_entry22.grid(column=1, row=2)
+    scrollbox31.grid(column=2, row=3)
+    
+    root.mainloop()

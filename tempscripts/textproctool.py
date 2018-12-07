@@ -457,7 +457,7 @@ def write_it(cnls, RC):
             if isinstance(res, str):
                 print('IND #', ind, res)
                 holder.append('Подходящих актов не найдено!')
-                writer(holder, 'psp_cnl_{:0>3d}'.format(ind), mode='w', verbose=False)
+                writer(holder, 'cnl_{:0>3d}'.format(ind), mode='w', verbose=False)
                 break
             st = '{:-<90s} || SC: {: >7.5f} || AL: {: >6s} || POS: {: >5d}'
             st = st.format(*res)
