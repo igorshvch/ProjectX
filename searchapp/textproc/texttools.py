@@ -2,7 +2,7 @@
 from collections import Counter
 from time import time
 
-__version__ = '0.2.1'
+__version__ = '0.3.1'
 
 ###Content=====================================================================
 def clean_txt_and_remove_stpw(par, sep, stpw):
@@ -27,6 +27,26 @@ def form_string_pattern(char, typ, fields):
     st = ['{:%s>' % char, '%s}' % typ]
     form = str(fields).join(st)
     return form
+
+def create_vocab(pkl, normalizer, time):
+    '''
+    In [0]: voc = create_vocab(...)
+    Act #  1000, time:    0.024 min (   1.419 sec)
+    Act #  2000, time:    0.048 min (   2.854 sec)
+    Act #  3000, time:    0.070 min (   4.211 sec)
+    ...
+    '''
+    timer = time()
+    gen = pkl.load_all_items()
+    vocab = set()
+    counter = 0
+    for act in gen:
+        counter+=1
+        if counter % 1000 == 0:
+            print('Act # {: >5d}, time: {: >8.3f} min ({: >8.3f} sec)'.format(counter, (time()-timer)/60, time() - timer))
+        tokens = normalizer.tokenize(act, mode='fal_ru_hyphen')
+        vocab.update(set(tokens))
+    return vocab
 
 
 ###Testing=====================================================================
