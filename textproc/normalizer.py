@@ -51,12 +51,12 @@ def tokenize(text, word_len=0, mode='spl_single'):
             if token
         ]
 
-def lemmatize(tokens_list):
+def lemmatize(tokens_iterable):
     local_parser = PARSER
-    return [local_parser(token) for token in tokens_list]
+    return [local_parser(token) for token in tokens_iterable]
 
-def lemmatize_by_map(tokens_list, mapping):
-    return [mapping[token] for token in tokens_list if token in mapping]
+def lemmatize_by_map(tokens_iterable, mapping):
+    return [mapping[token] for token in tokens_iterable if token in mapping]
 
 def normalize(text, word_len=0):
     local_parser = PARSER

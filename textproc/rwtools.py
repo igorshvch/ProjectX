@@ -51,22 +51,23 @@ def collect_exist_files_and_dirs(top_dir, suffix=''):
     inner_func(top_dir, suffix)
     return sorted(holder)
 
-def read_text(path):
-    with open(str(path), mode='r', encoding=GLOB_ENC) as fle:
+def read_text(path, encoding=GLOB_ENC):
+    with open(str(path), mode='r', encoding=encoding) as fle:
         text = fle.read()
     return text
 
-def write_text(text, path):
+def write_text(text, path, encoding=GLOB_ENC):
     if path[-4:] != '.txt':
         path += '.txt'
-    with open(path, mode='w', encoding=GLOB_ENC) as fle:
+    with open(path, mode='w', encoding=encoding) as fle:
         fle.write(text)
 
 def write_iterable_to_csv(full_path,
                           iter_txt_holder,
                           header=None,
-                          zero_string=None):
-    with open(full_path, mode='w', newline='', encoding=GLOB_ENC) as fle:
+                          zero_string=None,
+                          encoding=GLOB_ENC):
+    with open(full_path, mode='w', newline='', encoding=encoding) as fle:
         writer = csv_writer(
             fle,
             delimiter='|',
@@ -97,7 +98,7 @@ def load_pickle(path):
         data = pickle.load(fle)
     return data            
 
-def save_obj(py_obj, name, save_path):
+def save_object(py_obj, name, save_path):
     save_path = Path(save_path)
     path = save_path.joinpath(name)
     save_pickle(py_obj, str(path))

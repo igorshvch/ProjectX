@@ -1,0 +1,260 @@
+from guidialogs import ffp, fdp
+
+from importlib import reload
+
+from tempscripts import textproctool as tpt
+---------------------------------------------------------------------------
+ImportError                               Traceback (most recent call last)
+<ipython-input-3-c0df1aff1f40> in <module>()
+----> 1 from tempscripts import textproctool as tpt
+
+~\AppData\Local\Continuum\anaconda3\ProjectX\tempscripts\textproctool.py in <module>()
+     10 
+     11 from debugger import timer
+---> 12 from textproc.normalizer import tokenize, TokLem, PARSER
+     13 from textproc import rwtools, textsep
+     14 
+
+~\AppData\Local\Continuum\anaconda3\ProjectX\textproc\__init__.py in <module>()
+----> 1 from .rwtools import (
+      2     collect_exist_files,
+      3     collect_exist_dirs,
+      4     collect_exist_files_and_dirs,
+      5     read_text,
+
+ImportError: cannot import name 'save_obj'
+
+from tempscripts import textproctool as tpt
+
+from textproc import rwtools
+
+paths = rwtools.collect_exist_files(fdp(), '.txt')
+
+del paths
+
+acts_gen = tpt.create_docgen(fdp())
+
+cit_pkl = tpt.IOPickler(open(ffp(), mode='w+b'))
+
+cit_pkl.write(acts_gen)
+---------------------------------------------------------------------
+Acts were cleaned in 0.03125 seconds
+Acts were separated in 0.00000 seconds, 73 acts were found
+Acts were cleaned in 0.01563 seconds
+Acts were separated in 0.01563 seconds, 59 acts were found
+Acts were cleaned in 0.01562 seconds
+Acts were separated in 0.00000 seconds, 58 acts were found
+Acts were cleaned in 0.07813 seconds
+Acts were separated in 0.00000 seconds, 171 acts were found
+Acts were cleaned in 0.09375 seconds
+Acts were separated in 0.00000 seconds, 312 acts were found
+Acts were cleaned in 0.06249 seconds
+Acts were separated in 0.00000 seconds, 179 acts were found
+Acts were cleaned in 0.07813 seconds
+Acts were separated in 0.00000 seconds, 146 acts were found
+Acts were cleaned in 0.04687 seconds
+Acts were separated in 0.01563 seconds, 120 acts were found
+Acts were cleaned in 0.09375 seconds
+Acts were separated in 0.00000 seconds, 221 acts were found
+Acts were cleaned in 0.03125 seconds
+Acts were separated in 0.00000 seconds, 82 acts were found
+TIME:    0.0409 min (   2.4559 sec)
+---------------------------------------------------------------------
+
+len(cit_pkl)
+Out[11]: 1421
+
+cit_pkl.close()
+
+cit_pkl.reopen()
+
+cit_pkl.create_index()
+Out[14]: 'Index already exists!'
+
+from textproc import PARSER
+
+cit_lem_map = tpt.create_lem_map(tpt.create_vocab(cit_pkl), PARSER)
+Act #  1000, time:    0.028 min (   1.672 sec)
+
+len(cit_lem_map)
+Out[17]: 73415
+
+rwtools.save_object(cit_lem_map, '2018-12-12_cit_lem_map', fdp())
+
+from textproc import conclprep as cnp
+
+stored_concls = rwtools.read_text(ffp(), encoding='utf_8_sig')
+
+raw_query_concls = '\n'.join(rwtools.load_pickle(ffp()))
+
+cit_query_concls = cnp.find_concls(raw_query_concls, stored_concls)
+Total situations num: 933
+Total questions num: 933
+File 'found_concls' was written in mode 'w'
+
+cit_query_concls+= raw_query_concls.split('\n')[4]
+
+cit_query_concls[-1]
+Out[24]: '?'
+
+cit_query_concls[-2]
+Out[25]: ')'
+
+type(cit_query_concls)
+Out[26]: list
+
+len(cit_query_concls)
+Out[27]: 327
+
+cit_query_concls = cnp.find_concls(raw_query_concls, stored_concls)
+Total situations num: 933
+Total questions num: 933
+File 'found_concls' was written in mode 'w'
+
+len(cit_query_concls)
+Out[29]: 15
+
+cit_query_concls+= [raw_query_concls.split('\n')[4]]
+
+cit_query_concls[-1]
+Out[31]: '1.1. Можно ли в целях налогообложения прибыли учесть убыток в виде превышения стоимости вклада (взноса) в уставный капитал над доходом в виде имущества, полученным в связи с выходом (выбытием) из общества с ограниченной ответственностью или его ликвидацией (пп. 2.1 п. 1, п. 2 ст. 268 НК РФ, п. 2 ст. 277 НК РФ)?'
+
+rwtools.save_object(cit_query_concls, '2018-12-12_cit_query_concls_16', fdp())
+
+stpw = rwtools.load_pickle(ffp())
+
+Indexer = tpt.Indexer()
+
+cit_RC = tpt.ResultsCompiler()
+
+Indexer.init_model(cit_pkl, stpw, lem_mapping=None, mode='fal_ru_hyphen', ngram_range=(1,1))
+init_tokenizer--- : __0.000 min (___0.000 sec)
+init_vectorizers- : __0.000 min (___0.000 sec)
+init_tfidf_table- : __0.074 min (___4.426 sec)
+create_df_index-- : __0.145 min (___8.676 sec)
+create_pos_index- : __0.145 min (___8.676 sec)
+
+Indexer._define_used_alg()
+Out[37]: 'R'
+
+tpt.find_acts(cit_query_concls, Indexer, cit_RC)
+#  1 Search finished without results!
+#  2 Search finished without results!
+#  3 Search finished without results!
+#  4 Search finished without results!
+#  5 Search finished without results!
+#  6 Search finished without results!
+#  7 Search finished without results!
+#  8 Search finished without results!
+#  9 Search finished without results!
+# 11 Search finished without results!
+# 14 Search finished without results!
+# 15 Search finished without results!
+
+Indexer.save_model(fdp())
+
+rwtools.save_object(cit_RC, '2018-12-12_cit_RC_R', r'C:\Users\EA-ShevchenkoIS\ProjectX\_ЭСС_\2018-12-11_Кирпичи 37\9 - НП')
+
+Indexer.reset_state()
+
+Indexer.init_model(cit_pkl, stpw, lem_mapping=cit_lem_map, mode='fal_ru_hyphen', ngram_range=(1,1))
+init_tokenizer--- : __0.000 min (___0.000 sec)
+init_vectorizers- : __0.000 min (___0.000 sec)
+init_tfidf_table- : __0.077 min (___4.604 sec)
+create_df_index-- : __0.153 min (___9.182 sec)
+create_pos_index- : __0.153 min (___9.197 sec)
+
+Indexer._define_used_alg()
+Out[43]: 'N'
+
+tpt.find_acts(cit_query_concls, Indexer, cit_RC)
+#  3 Search finished without results!
+#  4 Search finished without results!
+#  5 Search finished without results!
+#  8 Search finished without results!
+# 13 Search finished without results!
+# 14 Search finished without results!
+# 15 Search finished without results!
+
+Indexer.save_model(fdp())
+
+rwtools.save_object(cit_RC, '2018-12-12_cit_RC_N', r'C:\Users\EA-ShevchenkoIS\ProjectX\_ЭСС_\2018-12-11_Кирпичи 37\9 - НП')
+
+Indexer.reset_state()
+
+Indexer.init_model(cit_pkl, stpw, lem_mapping=None, mode='fal_ru_hyphen', ngram_range=(2,2))
+init_tokenizer--- : __0.000 min (___0.000 sec)
+init_vectorizers- : __0.000 min (___0.000 sec)
+init_tfidf_table- : __0.165 min (___9.913 sec)
+create_df_index-- : __0.334 min (__20.028 sec)
+create_pos_index- : __0.336 min (__20.169 sec)
+
+Indexer._define_used_alg()
+Out[49]: 'RB'
+
+tpt.find_acts(cit_query_concls, Indexer, cit_RC)
+#  0 Search finished without results!
+#  1 Search finished without results!
+#  2 Search finished without results!
+#  3 Search finished without results!
+#  4 Search finished without results!
+#  5 Search finished without results!
+#  6 Search finished without results!
+#  7 Search finished without results!
+#  8 Search finished without results!
+#  9 Search finished without results!
+# 10 Search finished without results!
+# 12 Search finished without results!
+# 13 Search finished without results!
+# 14 Search finished without results!
+# 15 Search finished without results!
+
+Indexer.save_model(fdp())
+
+rwtools.save_object(cit_RC, '2018-12-12_cit_RC_RB', r'C:\Users\EA-ShevchenkoIS\ProjectX\_ЭСС_\2018-12-11_Кирпичи 37\9 - НП')
+
+Indexer.reset_state()
+
+Indexer.init_model(cit_pkl, stpw, lem_mapping=cit_lem_map, mode='fal_ru_hyphen', ngram_range=(2,2))
+init_tokenizer--- : __0.000 min (___0.000 sec)
+init_vectorizers- : __0.000 min (___0.000 sec)
+init_tfidf_table- : __0.166 min (___9.938 sec)
+create_df_index-- : __0.320 min (__19.219 sec)
+create_pos_index- : __0.322 min (__19.313 sec)
+
+Indexer._define_used_alg()
+Out[55]: 'NB'
+
+tpt.find_acts(cit_query_concls, Indexer, cit_RC)
+#  1 Search finished without results!
+#  2 Search finished without results!
+#  3 Search finished without results!
+#  4 Search finished without results!
+#  5 Search finished without results!
+#  6 Search finished without results!
+#  7 Search finished without results!
+#  8 Search finished without results!
+# 10 Search finished without results!
+# 12 Search finished without results!
+# 13 Search finished without results!
+# 14 Search finished without results!
+# 15 Search finished without results!
+
+Indexer.save_model(fdp())
+
+rwtools.save_object(cit_RC, '2018-12-12_cit_RC_NB', r'C:\Users\EA-ShevchenkoIS\ProjectX\_ЭСС_\2018-12-11_Кирпичи 37\9 - НП')
+
+Indexer.reset_state()
+
+from writer import writer
+
+writer(cit_query_concls, 'cot_query_concls', mode='w')
+File 'cot_query_concls' was written in mode 'w'
+
+tpt.write_it(cit_query_concls, cit_RC)
+IND # 3 C
+IND # 4 C
+IND # 5 C
+IND # 8 C
+IND # 14 C
+IND # 15 C

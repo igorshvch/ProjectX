@@ -1,5 +1,5 @@
-from searchapp.gui.dialogs import ffp, fdp
-import searchapp.textproc as textproc
+from guidialogs import ffp, fdp
+import textproc
 from time import strftime
 
 class InfoBank():
@@ -22,6 +22,6 @@ def add_data_files():
     res_text = ''
     for path in filepaths:
         res_text += textproc.read_text(path, encoding='utf-8')
-    GLOBALHOLDER.text_of_all_concls = res_text
+    INFOBANK.text_of_all_concls = res_text
     ###
 

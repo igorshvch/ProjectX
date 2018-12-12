@@ -3,7 +3,7 @@ from .rwtools import (
     collect_exist_dirs,
     collect_exist_files_and_dirs,
     read_text,
-    save_obj,
+    save_object,
     load_pickle
 )
 from .textsep import (

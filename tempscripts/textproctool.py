@@ -9,8 +9,8 @@ import scipy.sparse
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 from debugger import timer
-from textproc.normalizer import TokLem
-from textproc import rwtools
+from textproc.normalizer import tokenize, TokLem, PARSER
+from textproc import rwtools, textsep
 
 class IOPickler():
     def __init__(self, file):
@@ -94,8 +94,14 @@ class IOPickler():
         self.file.truncate(0)
         self.indexer=[]
 
+##################################################
 
-def create_vocab(pkl, normalizer, time):
+def create_docgen(folder):
+    filepaths = rwtools.collect_exist_files(folder, suffix='.txt')
+    docgen = (doc for path in filepaths for doc in textsep.separate_text(rwtools.read_text(path)))
+    return docgen
+
+def create_vocab(pkl):
     '''
     In [0]: voc = create_vocab(...)
     Act #  1000, time:    0.024 min (   1.419 sec)
@@ -111,9 +117,13 @@ def create_vocab(pkl, normalizer, time):
         counter+=1
         if counter % 1000 == 0:
             print('Act # {: >5d}, time: {: >8.3f} min ({: >8.3f} sec)'.format(counter, (time()-timer)/60, time() - timer))
-        tokens = normalizer.tokenize(act, mode='fal_ru_hyphen')
+        tokens = tokenize(act, mode='fal_ru_hyphen')
         vocab.update(set(tokens))
     return vocab
+
+def create_lem_map(vocab, PARSER):
+    local_parser = PARSER
+    return {word:local_parser(word) for word in vocab}
 
 ##################################################
 
@@ -357,14 +367,14 @@ class Indexer():
         return res_holder
     
     def save_model(self, folder_path):
-        rwtools.save_obj(self.TL, 'TL.model', folder_path)
-        rwtools.save_obj(self.tfv, 'tfv.model', folder_path)
-        rwtools.save_obj(self.cnt_v, 'cnt_v.model', folder_path)
+        rwtools.save_object(self.TL, 'TL.model', folder_path)
+        rwtools.save_object(self.tfv, 'tfv.model', folder_path)
+        rwtools.save_object(self.cnt_v, 'cnt_v.model', folder_path)
         scipy.sparse.save_npz(folder_path+r'\mtrx.npz', self.mtrx)
-        rwtools.save_obj(self.N, 'N.model', folder_path)
-        rwtools.save_obj(self.poses, 'poses.model', folder_path)
-        rwtools.save_obj(self.df, 'df.model', folder_path)
-        rwtools.save_obj(self.flags, 'flags.model', folder_path)
+        rwtools.save_object(self.N, 'N.model', folder_path)
+        rwtools.save_object(self.poses, 'poses.model', folder_path)
+        rwtools.save_object(self.df, 'df.model', folder_path)
+        rwtools.save_object(self.flags, 'flags.model', folder_path)
     
     def load_model(self, folder_path):
         self.reset_state()
@@ -438,14 +448,14 @@ class ResultsCompiler():
         self.res_store = {}
         self.concls = []
     
-def f2(cnl28, Indexer, rc):
-    for ind, cnl in enumerate(cnl28):
+def find_acts(cnls, ind_obj, rc_obj):
+    for ind, cnl in enumerate(cnls):
         cnl = cnl.strip()
-        res = Indexer.query_find_similar_acts(cnl, border=(2,3))
+        res = ind_obj.query_find_similar_acts(cnl, border=(2,3))
         if isinstance(res, str):
             print('# {: >2d}'.format(ind), res)
             continue
-        rc.add_results(res, cnl)
+        rc_obj.add_results(res, cnl)
 
 def write_it(cnls, RC):
     from writer import writer
@@ -462,7 +472,7 @@ def write_it(cnls, RC):
             st = '{:-<90s} || SC: {: >7.5f} || AL: {: >6s} || POS: {: >5d}'
             st = st.format(*res)
             holder.append(st)
-        writer(holder, 'psp_cnl_{:0>3d}'.format(ind), mode='w', verbose=False)
+        writer(holder, 'cnl_{:0>3d}'.format(ind), mode='w', verbose=False)
 
         
         

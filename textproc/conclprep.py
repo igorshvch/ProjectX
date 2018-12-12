@@ -165,6 +165,19 @@ def find_input_concl_in_stored_ones(lst_of_concls, store):
                 holder_ind.append(ind)
     return holder, dct, holder_ind
 
+def find_concls(raw_query_concls, raw_stored_concls):
+    from writer import writer
+    list_of_input_concls = clean_input_concls(raw_query_concls)
+    list_of_processed_concls = (
+        dct_to_list_of_concls(clean_output_concls(raw_stored_concls))
+    )
+    result, dct, _ = find_input_concl_in_stored_ones(
+        list_of_input_concls,
+        list_of_processed_concls
+    )
+    writer(dct.items(), 'found_concls', mode='w')
+    return result
+
 
 
 '''
@@ -189,22 +202,6 @@ def exclude_input_concl_in_stored_ones(lst_of_concls, store):
         res.append(store[ind])
     return res
 
-def main_include(paths):
-    from writer import writer
-    list_of_input_concls = clean_input_concls()
-    list_of_processed_concls = (
-        dct_to_list_of_concls(clean_output_concls())
-    )
-    result, dct, _ = find_input_concl_in_stored_ones(
-        list_of_input_concls,
-        list_of_processed_concls
-    )
-    writer(dct.items(), 'found_concls', mode='w')
-    rwtools.save_obj(
-        result,
-        'concls{}'.format(len(result)),
-        paths['proj_struct']['Conclusions']
-    )
 
 def main_exclude(paths):
     list_of_input_concls = clean_input_concls()
