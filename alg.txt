@@ -1,3 +1,47 @@
+from textproc import rwtools
+
+import re
+
+def text_to_list(text):
+    dct = {
+        '4':[],
+        '9':[],
+        '31':[],
+        '34':[]
+    }
+    spl = text.split('\n')
+    spl = [line.split('\t')[1:] for line in spl][1:]
+    for line in spl:
+        if re.search(r'(?<=Ä=)4', line[1]):
+            dct['4'].append(line[0])
+        elif re.search(r'(?<=Ä=)9', line[1]):
+            dct['9'].append(line[0])
+        elif re.search(r'(?<=Ä=)31', line[1]):
+            dct['31'].append(line[0])
+        elif re.search(r'(?<=Ä=)34', line[1]):
+            dct['34'].append(line[0])
+    return dct
+
+text = rwtools.read_text(ffp())
+
+for key in dct: print(key, len(dct[key]))
+4 6
+9 4
+31 1
+34 7
+
+rwtools.save_object(dct['4'], 'cnl_raw_6', fdp())
+
+rwtools.save_object(dct['9'], 'cnl_raw_4', fdp())
+
+rwtools.save_object(dct['31'], 'cnl_raw_1', fdp())
+
+rwtools.save_object(dct['34'], 'cnl_raw_7', fdp())
+
+=====================================================================
+=====================================================================
+=====================================================================
+
 from guidialogs import ffp, fdp
 
 from importlib import reload
