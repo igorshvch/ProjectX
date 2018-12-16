@@ -121,7 +121,7 @@ def create_vocab(pkl):
         vocab.update(set(tokens))
     return vocab
 
-def create_lem_map(vocab, PARSER):
+def create_lem_map(vocab, parser=PARSER):
     local_parser = PARSER
     return {word:local_parser(word) for word in vocab}
 
