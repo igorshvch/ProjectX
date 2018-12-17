@@ -1,4 +1,5 @@
 import re
+import random
 
 from debugger import timer
 
@@ -59,29 +60,32 @@ class MyReader_iter():
         self.dates = {}
         self.doc_pos = []
     def find_docs(self, pattern_date, pattern_start, pattern_end):
+        pid = random.randint(1000,9999)
         self.file.seek(0)
         last_position = -1
         while True:
             line = self.file.readline()
             current_position = self.file.tell()
             self.state = current_position
-            if re.match(pattern_date, line):
-                self.date_pos.append(current_position)
-                self.dates.setdefault(
-                    self.file.readline()[:-1], []
-                ).append(len(self.date_pos)-1)
-                yield None
-            elif re.match(pattern_start, line):
-                start_pos = current_position
-                yield None
-            elif re.match(pattern_end, line):
-                end_pos = current_position
-                self.doc_pos.append((start_pos, end_pos))
-                yield None
             if last_position == current_position:
                 break
             else:
                 last_position = current_position
+            if re.match(pattern_date, line):
+                self.date_pos.append((pid, current_position))
+                self.dates.setdefault(
+                    self.file.readline()[:-1], []
+                ).append(len(self.date_pos)-1)
+                yield 0
+            elif re.match(pattern_start, line):
+                start_pos = current_position
+                yield 0
+            elif re.match(pattern_end, line):
+                end_pos = current_position
+                self.doc_pos.append((pid, start_pos, end_pos))
+                yield 0
+            else:
+                continue
     def find_doc(self, index, mode='act', codec='cp1251'):
         self.file.seek(0)
         buffer = self.file.buffer
