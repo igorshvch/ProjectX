@@ -24,7 +24,6 @@ class SampleApp(tk.Tk):
         self.maxbytes = 0
 
     def start(self):
-        self.update()
         self.progress["value"] = 0
         self.maxbytes = 50000
         self.progress["maximum"] = self.maxbytes
