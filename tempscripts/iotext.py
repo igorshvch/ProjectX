@@ -11,8 +11,8 @@ class MyReader():
     def __init__(self, file):
         self.file = file
         self.file_size = file.seek(0, 2)
-        self.dates_to_poses = {} #store dates positions by date
-        self.dates_to_docs = {} #store docs positions by date
+        self.dates_to_poses = {} #store dates positions by date {date : [pos1, pos2]}
+        self.dates_to_docs = {} #store docs positions by date {date: [pos1, pos2]}
         self.dates_poses = []
         self.docs_poses = []
     @timer
@@ -123,7 +123,12 @@ class TextInfoCollector():
             if d in self.readers[key].dates_to_docs:
                 print(key, '===', self.readers[key].dates_to_docs[d])
 
-def find_positions_by_pattern(folder, pattern):
+def test_find_positions_by_pattern(folder, pattern):
+    '''
+    Testing.
+    Find positons of text sequences corresponding
+    to the pattern passed as argument
+    '''
     holder = []
     last_pos = -1
     fp = rwtools.collect_exist_files(folder, suffix='.txt')
@@ -141,6 +146,51 @@ def find_positions_by_pattern(folder, pattern):
                 else:
                     last_pos = cur_pos
     return holder
+
+def test_simple_text_gen(words_num, alph=1040):
+    '''
+    Testing.
+    Generate semi-text sequences for further indexing tests
+    '''
+    alph = [chr(i) for i in range(alph, alph+32)]
+    res = []
+    while words_num:
+        length = random.randint(1, 20)
+        res.append(''.join(random.sample(alph, k=length)))
+        words_num -= 1
+    return res
+
+@timer
+def test_indexer(docs, vocab=None, tokenizer=None):
+    '''
+    Testing.
+    Create primitive inverted index table on passed iterable with tokened docs
+    '''
+    if vocab:
+        inner_voc = vocab
+    else:
+        inner_voc = dict()
+    for ind, doc in enumerate(docs):
+        if tokenizer:
+            doc = tokenizer(doc)
+        for token in set(doc):
+            inner_voc.setdefault(token, []).append(ind)
+    return inner_voc
+
+def test_word_expand(word, morph=None):
+    '''
+    Query word expander. Use pymorphy2 'MorphAnalyzer' instance
+
+    -> In[0]: test_word_expand('взносы')
+    -> Out[79]: 
+    -> ['взнос',
+        'взноса',
+        ...
+        'взносах'] 
+    '''
+    w = morph.parse(word)[0]
+    res = [i[0] for i in w.lexeme]
+    return res
 
 class MyReader_iter():
     def __init__(self, file):
