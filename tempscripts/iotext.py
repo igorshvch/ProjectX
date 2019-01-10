@@ -7,14 +7,18 @@ from textproc import rwtools
 from debugger import timer
 
 
-class MyReader():
+class MyReaderBase():
     def __init__(self, file):
         self.file = file
         self.file_size = file.seek(0, 2)
-        self.dates_to_poses = {} #store dates positions by date {date : [pos1, pos2]}
-        self.dates_to_docs = {} #store docs positions by date {date: [pos1, pos2]}
+        #store dates positions by date {date : [pos1, pos2]}
+        #for code analysis puprose
+        self.dates_to_poses = {}
+        #store docs positions by date {date: [pos1, pos2]}
+        self.dates_to_docs = {}
         self.dates_poses = []
         self.docs_poses = []
+
     @timer
     def find_docs(self,
                   pattern_date,
@@ -45,6 +49,7 @@ class MyReader():
                 break
             else:
                 last_position = current_position
+
     @timer
     def find_doc(self, index, codec='cp1251', show_date=False):
         buffer = self.file.buffer
@@ -87,6 +92,97 @@ class MyReader():
             raise KeyError('No docs by date {}',format(str(d)))
         docs_quant = len(self.dates_to_poses[d])
         print('{: <11s} : {: >4d} docs'.format(str(d), docs_quant))
+
+class MyReader(MyReaderBase):
+    def __init__(self, patterns_file, *args):
+        MyReaderBase.__init__(self, *args)
+        self.patterns = self._unpack_patterns_from_file(patterns_file)
+        #store docs positions by classes {class: [pos1, pos2]}
+        self.classes_to_poses = {}
+    
+    def _unpack_patterns_from_file(self, file):
+        text = file.read().strip(' \n')
+        spl = text.split('\n')
+        return {i:pattern for i, pattern in enumerate(spl)}
+
+    def _document_processor(self,
+                            buffer, 
+                            start_position,
+                            pattern_doc_end,
+                            codec='cp1251'):
+        patterns = self.patterns
+        length = len(patterns)
+        flags = {i:True for i in range(length)}
+        classlabels = []
+        buffer.seek(start_position)
+        while True:
+            line = buffer.readline().decode(codec)
+            current_position = buffer.tell()
+            if re.match(pattern_doc_end, line):
+                return current_position, classlabels
+            else:
+                for i in range(length):
+                    if flags[i] and re.search(patterns[i], line):
+                        classlabels.append(i)
+                        flags[i] = False
+    
+    def _labels_to_classes(self, labels):
+        labels_set = set(labels)
+        if (
+            {0,1,5} <= labels_set
+            or {1,7} <= labels_set
+        ):
+            return 0, 3
+        elif {0,1,4} <= labels_set:
+            return 1, 3
+        elif (
+            {0,1,6} <= labels_set
+            or {1,8} <= labels_set
+            or {1,2} <= labels_set
+            or {1,3} <= labels_set
+        ):
+            return 2, 3
+        elif {0,1} <= labels_set:
+            return (3,)
+
+    @timer
+    def find_docs(self,
+                  pattern_date,
+                  pattern_doc_start,
+                  pattern_doc_end,
+                  codec='cp1251'):
+        #Patterns: (r'Когда получен\n', r'Текст документа\n', r'-{66}')
+        buffer = self.file.buffer
+        buffer.seek(0)
+        last_position = -1
+        counter = 0
+        while True:
+            line = buffer.readline().decode(codec)
+            current_position = buffer.tell()
+            if re.match(pattern_date, line):
+                d = buffer.readline().decode(codec)[:-1].split('.')
+                d = date(int(d[2]), int(d[1]), int(d[0]))
+                self.dates_to_poses.setdefault(d, []).append(current_position)
+                self.dates_poses.append(current_position)
+                continue
+            elif re.match(pattern_doc_start, line):
+                counter += 1
+                start_pos = current_position
+                end_pos, labels = self._document_processor(
+                    buffer, start_pos, pattern_doc_end, codec=codec
+                )
+                classes_marks = self._labels_to_classes(labels)
+                self.dates_to_docs.setdefault(d, []).append((start_pos, end_pos))
+                self.docs_poses.append((start_pos, end_pos))
+                for mark in classes_marks:
+                    self.classes_to_poses.setdefault(mark, [])\
+                    .append((start_pos, end_pos))
+                continue
+            if last_position == current_position:
+                print(counter)
+                break
+            else:
+                last_position = current_position
 
 class TextInfoCollector():
     def __init__(self, folder):
@@ -192,7 +288,7 @@ def test_word_expand(word, morph=None):
     res = [i[0] for i in w.lexeme]
     return res
 
-class MyReader_iter():
+class MyReaderBase_iter():
     def __init__(self, file):
         self.file = file
         self.file_size = file.seek(0, 2)
