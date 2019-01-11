@@ -18,6 +18,11 @@ class MyReaderBase():
         self.dates_to_docs = {}
         self.dates_poses = []
         self.docs_poses = []
+    
+    def __len__(self):
+        if self.docs_poses:
+            print('Number of processed documents')
+            return len(self.docs_poses)
 
     @timer
     def find_docs(self,
@@ -25,7 +30,8 @@ class MyReaderBase():
                   pattern_doc_start,
                   pattern_doc_end,
                   codec='cp1251'):
-        #Patterns: (r'Когда получен\n', r'Текст документа\n', r'-{66}')
+        #Patterns 1: (r'Когда получен\n', r'Текст документа\n', r'-{66}')
+        #Patterns 2: (r'Когда получен[\n\r]{1,2}', r'Текст документа[\n\r]{1,2}', r'-{66}')
         buffer = self.file.buffer
         buffer.seek(0)
         last_position = -1
@@ -81,10 +87,18 @@ class MyReaderBase():
             yield text
     
     def print_stats(self):
+        print('-'*22)
+        print('Path to file:')
         print(self.file.name)
+        print('-'*22)
+        counter = 0
         for key in sorted(self.dates_to_poses.keys()):
             docs_quant = len(self.dates_to_poses[key])
+            counter += docs_quant
             print('{: <11s} : {: >3d} docs'.format(str(key), docs_quant))
+        print('-'*22)
+        print('Docs in total :', counter)
+        print('-'*22)
     
     def print_stats_by_date(self, year, month, day):
         d = date(year, month, day)
@@ -101,6 +115,7 @@ class MyReader(MyReaderBase):
         self.classes_to_poses = {}
     
     def _unpack_patterns_from_file(self, file):
+        file.seek(0)
         text = file.read().strip(' \n')
         spl = text.split('\n')
         return {i:pattern for i, pattern in enumerate(spl)}
@@ -113,7 +128,7 @@ class MyReader(MyReaderBase):
         patterns = self.patterns
         length = len(patterns)
         flags = {i:True for i in range(length)}
-        classlabels = []
+        classlabels = set()
         buffer.seek(start_position)
         while True:
             line = buffer.readline().decode(codec)
@@ -122,8 +137,8 @@ class MyReader(MyReaderBase):
                 return current_position, classlabels
             else:
                 for i in range(length):
-                    if flags[i] and re.search(patterns[i], line):
-                        classlabels.append(i)
+                    if flags[i] and re.search(patterns[i], line, re.IGNORECASE):
+                        classlabels.add(i)
                         flags[i] = False
     
     def _labels_to_classes(self, labels):
@@ -144,6 +159,8 @@ class MyReader(MyReaderBase):
             return 2, 3
         elif {0,1} <= labels_set:
             return (3,)
+        else:
+            return ('unarranged',)
 
     @timer
     def find_docs(self,
@@ -151,7 +168,8 @@ class MyReader(MyReaderBase):
                   pattern_doc_start,
                   pattern_doc_end,
                   codec='cp1251'):
-        #Patterns: (r'Когда получен\n', r'Текст документа\n', r'-{66}')
+        #Patterns 1: (r'Когда получен\n', r'Текст документа\n', r'-{66}')
+        #Patterns 2: (r'Когда получен[\n\r]{1,2}', r'Текст документа[\n\r]{1,2}', r'-{66}')
         buffer = self.file.buffer
         buffer.seek(0)
         last_position = -1
@@ -173,13 +191,13 @@ class MyReader(MyReaderBase):
                 )
                 classes_marks = self._labels_to_classes(labels)
                 self.dates_to_docs.setdefault(d, []).append((start_pos, end_pos))
-                self.docs_poses.append((start_pos, end_pos))
+                current_doc_num = len(self.docs_poses)
                 for mark in classes_marks:
                     self.classes_to_poses.setdefault(mark, [])\
-                    .append((start_pos, end_pos))
+                    .append(current_doc_num)
+                self.docs_poses.append((start_pos, end_pos))
                 continue
             if last_position == current_position:
-                print(counter)
                 break
             else:
                 last_position = current_position
