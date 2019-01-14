@@ -56,7 +56,6 @@ class MyReaderBase():
             else:
                 last_position = current_position
 
-    @timer
     def find_doc(self, index, codec='cp1251', show_date=False):
         buffer = self.file.buffer
         start, stop = self.docs_poses[index]
@@ -137,7 +136,7 @@ class MyReader(MyReaderBase):
                 return current_position, classlabels
             else:
                 for i in range(length):
-                    if flags[i] and re.search(patterns[i], line, re.IGNORECASE):
+                    if flags[i] and re.search(patterns[i], line):
                         classlabels.add(i)
                         flags[i] = False
     
@@ -305,6 +304,27 @@ def test_word_expand(word, morph=None):
     w = morph.parse(word)[0]
     res = [i[0] for i in w.lexeme]
     return res
+
+def test_find_patterns_in_lines(mr, index):
+    '''
+    Search lines for patterns which are used in MyReader._document_processor().
+    To get lines document with specified index is used
+    Example of output:
+    ======>>0147==============================
+    (29, 'налог[а-я]*')
+    (34, 'налог[а-я]*')
+    (34, 'взнос[а-я]*')
+    (34, 'на доходы физических лиц')
+    (36, 'взнос[а-я]*')
+    '''
+    holder = []
+    text = mr.find_doc(index, show_date=True)
+    for ind, line in enumerate(text.split('\n')):
+        for key in mr.patterns:
+            if re.search(mr.patterns[key], line, re.IGNORECASE):
+                holder.append((ind, mr.patterns[key]))
+    return holder
+
 
 class MyReaderBase_iter():
     def __init__(self, file):
