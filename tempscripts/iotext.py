@@ -141,23 +141,38 @@ class MyReader(MyReaderBase):
                         flags[i] = False
     
     def _labels_to_classes(self, labels):
-        labels_set = set(labels)
-        if (
-            {0,1,5} <= labels_set
-            or {1,7} <= labels_set
-        ):
-            return 0, 3
-        elif {0,1,4} <= labels_set:
-            return 1, 3
-        elif (
-            {0,1,6} <= labels_set
-            or {1,8} <= labels_set
-            or {1,2} <= labels_set
-            or {1,3} <= labels_set
-        ):
-            return 2, 3
-        elif {0,1} <= labels_set:
-            return (3,)
+        class_marks = []
+        #if (
+        #    {0,1,5} <= labels_set
+        #    or {1,7} <= labels_set
+        #):
+        #    return 0, 3
+        #elif {0,1,4} <= labels_set:
+        #    return 1, 3
+        #elif (
+        #    {0,1,6} <= labels_set
+        #    or {1,8} <= labels_set
+        #    or {1,2} <= labels_set
+        #    or {2,3} <= labels_set
+        #):
+        #    return 2, 3
+        #elif (
+        #    {0,1} <= labels_set
+        #    or {9} <= labels_set
+        #    ):
+        #    return (3,)
+        #else:
+        #    return ('unarranged',)
+        if 5 in labels or 7 in labels:
+            class_marks.append(0)
+        if 4 in labels:
+            class_marks.append(1)
+        if 8 in labels or 6 in labels or {2,3} <= labels:
+            class_marks.append(2)
+        if 9 in labels or {0,1} <= labels:
+            class_marks.append(3)
+        if class_marks:
+            return class_marks
         else:
             return ('unarranged',)
 
@@ -200,6 +215,12 @@ class MyReader(MyReaderBase):
                 break
             else:
                 last_position = current_position
+    
+    def show_class_info(self):
+        if not self.classes_to_poses:
+            return 'Documents werre not arranged'
+        for key in self.classes_to_poses:
+            print (key, len(self.classes_to_poses[key]))
 
 class TextInfoCollector():
     def __init__(self, folder):
@@ -321,7 +342,7 @@ def test_find_patterns_in_lines(mr, index):
     text = mr.find_doc(index, show_date=True)
     for ind, line in enumerate(text.split('\n')):
         for key in mr.patterns:
-            if re.search(mr.patterns[key], line, re.IGNORECASE):
+            if re.search(mr.patterns[key], line):
                 holder.append((ind, mr.patterns[key]))
     return holder
 
