@@ -2,6 +2,7 @@
 import re
 import random
 from datetime import date
+from typing import Sequence, List, Dict, Tuple
 
 from textproc import rwtools
 from debugger import timer
@@ -14,7 +15,7 @@ class MyReaderBase():
         #store dates positions by date {date : [pos1, pos2]}
         #for code analysis puprose
         self.dates_to_poses = {}
-        #store docs positions by date {date: [pos1, pos2]}
+        #store docs positions by date {date: [(p1s, p1e), (p2s, p2e)]}
         self.dates_to_docs = {}
         self.dates_poses = []
         self.docs_poses = []
@@ -72,13 +73,13 @@ class MyReaderBase():
         d = date(year, month, day)
         if d not in self.dates_to_docs:
             return None
-        docs_poses = self.dates_to_docs[d]
+        doc_poses = self.dates_to_docs[d]
         print(
-            'There are {: >3d}'.format(len(docs_poses)),
+            'There are {: >3d}'.format(len(doc_poses)),
             'documents by date {}'.format(str(d))
         )
         buffer = self.file.buffer
-        for pose in docs_poses:
+        for pose in doc_poses:
             start, stop = pose
             buffer.seek(start)
             doc_b = buffer.read(stop-start)
@@ -110,6 +111,8 @@ class MyReader(MyReaderBase):
     def __init__(self, patterns_file, *args):
         MyReaderBase.__init__(self, *args)
         self.patterns = self._unpack_patterns_from_file(patterns_file)
+        #store docs positions by date {date: [pos1, pos2]}
+        self.dates_to_docs = {}
         #store docs positions by classes {class: [pos1, pos2]}
         self.classes_to_poses = {}
     
@@ -142,27 +145,6 @@ class MyReader(MyReaderBase):
     
     def _labels_to_classes(self, labels):
         class_marks = []
-        #if (
-        #    {0,1,5} <= labels_set
-        #    or {1,7} <= labels_set
-        #):
-        #    return 0, 3
-        #elif {0,1,4} <= labels_set:
-        #    return 1, 3
-        #elif (
-        #    {0,1,6} <= labels_set
-        #    or {1,8} <= labels_set
-        #    or {1,2} <= labels_set
-        #    or {2,3} <= labels_set
-        #):
-        #    return 2, 3
-        #elif (
-        #    {0,1} <= labels_set
-        #    or {9} <= labels_set
-        #    ):
-        #    return (3,)
-        #else:
-        #    return ('unarranged',)
         if 5 in labels or 7 in labels:
             class_marks.append(0)
         if 4 in labels:
@@ -204,11 +186,11 @@ class MyReader(MyReaderBase):
                     buffer, start_pos, pattern_doc_end, codec=codec
                 )
                 classes_marks = self._labels_to_classes(labels)
-                self.dates_to_docs.setdefault(d, []).append((start_pos, end_pos))
                 current_doc_num = len(self.docs_poses)
                 for mark in classes_marks:
                     self.classes_to_poses.setdefault(mark, [])\
                     .append(current_doc_num)
+                self.dates_to_docs.setdefault(d, []).append(current_doc_num)
                 self.docs_poses.append((start_pos, end_pos))
                 continue
             if last_position == current_position:
@@ -216,23 +198,102 @@ class MyReader(MyReaderBase):
             else:
                 last_position = current_position
     
+    def find_docs_by_date(self, year, month, day, codec='cp1251'):
+        d = date(year, month, day)
+        if d not in self.dates_to_docs:
+            return None
+        doc_poses = self.docs_poses[self.dates_to_docs[d]]
+        print(
+            'There are {: >3d}'.format(len(doc_poses)),
+            'documents by date {}'.format(str(d))
+        )
+        buffer = self.file.buffer
+        for pose in doc_poses:
+            start, stop = pose
+            buffer.seek(start)
+            doc_b = buffer.read(stop-start)
+            text = doc_b.decode(codec)[2:-74]
+            yield text
+    
+    def find_relevant_docs_by_date(self, docs_class_key, year, month, day):
+        d = date(year, month, day)
+        if d not in self.dates_to_docs:
+            raise 'Incorrect date'
+        if docs_class_key not in self.classes_to_poses:
+            raise 'Inccorect docs group ID'
+        test_set = set(self.dates_to_docs[d])
+        for ind in self.classes_to_poses[docs_class_key]:
+            if ind in test_set:
+                yield self.find_doc(ind)
+    
+    def find_relevant_docs_after_date(self, docs_class_key, year, month, day):
+        d = date(year, month, day)
+        if docs_class_key not in self.classes_to_poses:
+            return 'Inccorect docs group ID'
+        test_set = []
+        for key_date in sorted(self.dates_to_docs.keys()):
+            if d <= key_date:
+                test_set.extend(self.dates_to_docs[key_date])
+        test_set = set(test_set)
+        for ind in self.classes_to_poses[docs_class_key]:
+            if ind in test_set:
+                yield self.find_doc(ind) 
+
+
+class MyReader_testing(MyReader):
+    def __init__(self, *args):
+        MyReader.__init__(self, *args)
+    
     def show_class_info(self):
         if not self.classes_to_poses:
             return 'Documents werre not arranged'
         for key in self.classes_to_poses:
             print (key, len(self.classes_to_poses[key]))
+    
+    def find_patterns_in_lines(self, indexes: Sequence[int]):
+        '''
+        Search lines for patterns which are used in MyReader._document_processor().
+        To get lines document with specified index is used
+        Example of output:
+        ======>>0147==============================
+        (29, 'налог[а-я]*')
+        (34, 'налог[а-я]*')
+        (34, 'взнос[а-я]*')
+        (34, 'на доходы физических лиц')
+        (36, 'взнос[а-я]*')
+        '''
+        holder = []
+        for doc_ind in indexes:
+            holder.append('='*10 + str(doc_ind) + '='*10)
+            text = self.find_doc(doc_ind, show_date=True)
+            for ind, line in enumerate(text.split('\n')):
+                for key in self.patterns:
+                    if re.search(self.patterns[key], line):
+                        holder.append((ind, self.patterns[key]))
+        return holder
+
 
 class TextInfoCollector():
-    def __init__(self, folder):
+    def __init__(self, folder, path_to_patterns):
+        self.path_to_patterns = path_to_patterns
         self.folder = folder
         self.readers = {}
     @timer
     def process_files(self):
         f_paths = rwtools.collect_exist_files(self.folder, suffix='.txt')
         for path in f_paths:
-            self.readers[path.stem] = MyReader(open(path, mode='r'))
+            self.readers[path.stem] = MyReader(
+                open(self.path_to_patterns, mode='r'),
+                open(path, mode='r')
+            )
             self.readers[path.stem].find_docs(
                 r'Когда получен\r', r'Текст документа\r', r'-{66}'
+            )
+    
+    def find_relevant_docs_by_date(self, docs_class_key, year, month, day):
+        for key in sorted(self.readers.keys()):
+            yield from self.readers[key].find_relevant_docs_after_date(
+                docs_class_key, year, month, day
             )
     
     def find_docs_by_date(self, year, month, day):
@@ -256,6 +317,8 @@ class TextInfoCollector():
         for key in self.readers.keys():
             if d in self.readers[key].dates_to_docs:
                 print(key, '===', self.readers[key].dates_to_docs[d])
+
+
 
 def test_find_positions_by_pattern(folder, pattern):
     '''
@@ -325,72 +388,3 @@ def test_word_expand(word, morph=None):
     w = morph.parse(word)[0]
     res = [i[0] for i in w.lexeme]
     return res
-
-def test_find_patterns_in_lines(mr, index):
-    '''
-    Search lines for patterns which are used in MyReader._document_processor().
-    To get lines document with specified index is used
-    Example of output:
-    ======>>0147==============================
-    (29, 'налог[а-я]*')
-    (34, 'налог[а-я]*')
-    (34, 'взнос[а-я]*')
-    (34, 'на доходы физических лиц')
-    (36, 'взнос[а-я]*')
-    '''
-    holder = []
-    text = mr.find_doc(index, show_date=True)
-    for ind, line in enumerate(text.split('\n')):
-        for key in mr.patterns:
-            if re.search(mr.patterns[key], line):
-                holder.append((ind, mr.patterns[key]))
-    return holder
-
-
-class MyReaderBase_iter():
-    def __init__(self, file):
-        self.file = file
-        self.file_size = file.seek(0, 2)
-        self.state = 0
-        self.date_pos = []
-        self.dates = {}
-        self.doc_pos = []
-    def find_docs(self, pattern_date, pattern_start, pattern_end):
-        pid = random.randint(1000,9999)
-        self.file.seek(0)
-        last_position = -1
-        while True:
-            line = self.file.readline()
-            current_position = self.file.tell()
-            self.state = current_position
-            if last_position == current_position:
-                break
-            else:
-                last_position = current_position
-            if re.match(pattern_date, line):
-                self.date_pos.append((pid, current_position))
-                self.dates.setdefault(
-                    self.file.readline()[:-1], []
-                ).append(len(self.date_pos)-1)
-                yield 0
-            elif re.match(pattern_start, line):
-                start_pos = current_position
-                yield 0
-            elif re.match(pattern_end, line):
-                end_pos = current_position
-                self.doc_pos.append((pid, start_pos, end_pos))
-                yield 0
-            else:
-                continue
-    def find_doc(self, index, mode='act', codec='cp1251'):
-        self.file.seek(0)
-        buffer = self.file.buffer
-        if mode == 'act':
-            start, stop = self.doc_pos[index]
-            buffer.seek(start)
-        elif mode == 'date':
-            start, stop = self.date_pos[index:index+2]
-            buffer.seek(self.date_pos[index])
-        act_b = buffer.read(stop-start)
-        text = act_b.decode(codec)[2:-74]
-        return text

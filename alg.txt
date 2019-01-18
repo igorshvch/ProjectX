@@ -87,19 +87,19 @@ Acts were separated in 0.00000 seconds, 82 acts were found
 TIME:    0.0409 min (   2.4559 sec)
 ---------------------------------------------------------------------
 
-cit_lem_map = tpt.create_lem_map(tpt.create_vocab(cit_pkl), PARSER)
+lem_map = tpt.create_lem_map(tpt.create_vocab(pkl), PARSER)
 Act #  1000, time:    0.028 min (   1.672 sec)
 
-len(cit_lem_map)
+len(lem_map)
 Out[17]: 73415
 
-rwtools.save_object(cit_lem_map, '2018-12-12_cit_lem_map', fdp())
+rwtools.save_object(cit_lem_map, '2018-12-12_---_lem_map', fdp())
 
 stored_concls = rwtools.read_text(ffp(), encoding='utf_8_sig')
 
 raw_query_concls = '\n'.join(rwtools.load_pickle(ffp()))
 
-cit_query_concls = cnp.find_concls(raw_query_concls, stored_concls)
+query_concls = cnp.find_concls(raw_query_concls, stored_concls)
 Total situations num: 933
 Total questions num: 933
 File 'found_concls' was written in mode 'w'
@@ -114,7 +114,7 @@ Out[18]: '3.1. Может ли организация уплачивать налоги наличными денежными средст
 len(cit_query_concls)
 Out[29]: 15
 
-rwtools.save_object(cit_query_concls, '2018-12-12_cit_query_concls_16', fdp())
+rwtools.save_object(query_concls, '2018-12-12_cit_query_concls_16', fdp())
 
 stpw = rwtools.load_pickle(ffp())
 
