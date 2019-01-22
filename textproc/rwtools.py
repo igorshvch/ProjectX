@@ -98,9 +98,9 @@ def load_pickle(path):
         data = pickle.load(fle)
     return data            
 
-def save_object(py_obj, name, save_path):
-    save_path = Path(save_path)
-    path = save_path.joinpath(name)
+def save_object(py_obj, name, save_folder):
+    save_folder = Path(save_folder)
+    path = save_folder.joinpath(name)
     save_pickle(py_obj, str(path))
 
 

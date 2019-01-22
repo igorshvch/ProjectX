@@ -11,7 +11,7 @@ def text_to_list(text):
         '34':[]
     }
     spl = text.split('\n')
-    spl = [line.split('\t')[1:] for line in spl][1:]
+    spl = [line.split('\t') for line in spl]
     for line in spl:
         if re.search(r'(?<=Ä=)4', line[1]):
             dct['4'].append(line[0])
@@ -32,6 +32,11 @@ for key in dct: print(key, len(dct[key]))
 9 4
 31 1
 34 7
+
+def save_dct(dct, folder_path):
+    for key in dct:
+        rwtools.save_object(dct[key], 'cnl_raw_{}'.format(key), folder_path)
+
 
 rwtools.save_object(dct['4'], 'cnl_raw_6', fdp())
 
@@ -93,7 +98,7 @@ Act #  1000, time:    0.028 min (   1.672 sec)
 len(lem_map)
 Out[17]: 73415
 
-rwtools.save_object(cit_lem_map, '2018-12-12_---_lem_map', fdp())
+rwtools.save_object(lem_map, '2018-12-12_---_lem_map', fdp())
 
 stored_concls = rwtools.read_text(ffp(), encoding='utf_8_sig')
 

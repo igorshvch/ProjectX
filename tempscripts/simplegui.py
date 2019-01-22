@@ -31,3 +31,34 @@ def f(items):
     tv.pack()
     tv2.pack()
     root.mainloop()
+
+def f2(dct):
+    dct = list(dct.items())
+    def button_cmd():
+        print(tv.selection())
+    def inner_f(x):
+        region = tv.identify('region', x.x, x.y)
+        if region == 'heading':
+            col = tv.identify('column', x.x, x.y)
+            print(col)
+    def fill_in(column):
+        pass        
+    cols=['class', 'facts']
+    root = tk.Tk()
+    btn1 = ttk.Button(root, text='Print selected', command=button_cmd)
+    tv = ttk.Treeview(root, columns=cols)
+    tv.heading('#0', text='concls')
+    tv.column('#0', width=100, stretch=True)
+    for i in cols:
+        tv.heading(i, text=str(i))
+        tv.column(i, width=40, stretch=True)
+    for pair in dct:
+        for key, val in pair:
+           tv.insert('', 'end', text=val, values=key)
+    tv.bind('<Double-3>', lambda x: inner_f(x))
+    #tv.bind('<Double-1>', lambda x: print(tv.item(tv.identify('item', x.x, x.y))))
+    #tv.bind('<Double-2>', lambda x: print(tv.get_children('')))
+    #tv.bind('<<TreeviewSelect>>', lambda x: print('Select!'))
+    btn1.pack(fill='x', expand='yes')
+    tv.pack(fill='x', expand='yes')
+    root.mainloop()

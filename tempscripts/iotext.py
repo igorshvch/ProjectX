@@ -146,13 +146,13 @@ class MyReader(MyReaderBase):
     def _labels_to_classes(self, labels):
         class_marks = []
         if 5 in labels or 7 in labels:
-            class_marks.append(0)
+            class_marks.append('НДС')
         if 4 in labels:
-            class_marks.append(1)
+            class_marks.append('НП')
         if 8 in labels or 6 in labels or {2,3} <= labels:
-            class_marks.append(2)
+            class_marks.append('НДФЛ_СВ')
         if 9 in labels or {0,1} <= labels:
-            class_marks.append(3)
+            class_marks.append('Ч1_НК')
         if class_marks:
             return class_marks
         else:
