@@ -1,23 +1,32 @@
 #Treeview issue:
 #https://stackoverflow.com/questions/49715456/forcing-a-tkinter-ttk-treeview-widget-to-resize-after-shrinking-its-column-width
+#Bryan Oakley answer and index for his posts on stackoverflow.com:
+#https://stackoverflow.com/questions/7546050/switch-between-two-frames-in-tkinter
+#tkinter ttk.Entry validation:
+#https://stackoverflow.com/questions/42332941/how-to-get-validation-to-work-in-tkinter-entry-fields
+#https://stackoverflow.com/questions/4140437/interactively-validating-entry-widget-content-in-tkinter/4140988#4140988
 
 import tkinter as tk
 from tkinter import ttk
+import calendar
+from datetime import date
+#leap yeasr formula:
+#366 if ((year%4 == 0 and year%100 != 0) or (year%400 == 0)) else 365
 
 from guidialogs import ffp, fdp
 
-class TreeviewBuilder():
-    def __init__(self, root=None):
-        self.root = root if root else tk.Tk()
+class TreeviewBuilder(ttk.Frame):
+    def __init__(self, parent=None, **kwargs):
+        ttk.Frame.__init__(self, parent, **kwargs)
         self.info = None
         self.tv = None
-        self.btn1 = None
+        self.btn_1 = None
         self.data = None
         self.sort_flag_0 = False
         self.sort_flag_1 = False
         self.sort_flag_2 = False
     
-    def btn1_cmd(self):
+    def btn_1_cmd(self):
         #print(self.tv.selection())
         if not self.tv.selection():
             return None
@@ -69,17 +78,17 @@ class TreeviewBuilder():
                 values=(val1, val2)
             )
 
-    def build_Treeview(self, head, cols, data):
+    def build_widget(self, head, cols, data):
         self.data = data
-        self.btn1 = ttk.Button(self.root, text='Print selected', command=self.btn1_cmd)
-        self.tv = ttk.Treeview(self.root, columns=cols)
+        self.btn_1 = ttk.Button(self, text='Print selected', command=self.btn_1_cmd)
+        self.tv = ttk.Treeview(self, columns=cols)
         self.tv.heading('#0', text=head, command=self.sort0)
         self.tv.column('#0', width=100, stretch=True)
         for i, cmd in zip(cols, (self.sort1, self.sort2)):
             self.tv.heading(i, text=str(i), command=cmd)
             self.tv.column(i, width=40, stretch=True)
         for triple in data:
-            key, val1, val2 = triple
+            key, val1, val2, = triple
             self.tv.insert(
                 '',
                 'end',
@@ -94,56 +103,144 @@ class TreeviewBuilder():
             '<Double-1>',
             lambda x: print(self.tv.item(self.tv.identify('item', x.x, x.y)))
         )
+        self.btn_1.pack(fill='x', expand='yes')
+        self.tv.pack(fill='x', expand='yes')
     
     def start_widget(self):
-        self.btn1.pack(fill='x', expand='yes')
-        self.tv.pack(fill='x', expand='yes')
-        self.root.mainloop()
+        self.pack(fill='both', expand='yes')
+        self.mainloop()
 
 
-class Filesloader():
-    def __init__(self, root=None):
-        self.root = root if root else tk.Tk()
+class Filesloader(ttk.Frame):
+    def __init__(self, parent=None, **kwargs):
+        ttk.Frame.__init__(self, parent, **kwargs)
+        self.st_var = None
+        self.btn_1 = None
+        self.btn_r = None
+        self.label_inf = None
         self.st_var = tk.StringVar()
-        self.btn1 = None
-        self.btn2 = None
-        self.inf_label = None
     
-    def btn1_cmd(self):
+    def btn_1_cmd(self):
         self.path = ffp()
         self.st_var.set(self.path)
-        self.btn1.configure(state='disabled')
-        #self.inf_label.update()
+        self.btn_1.configure(state='disabled')
+        self.label_inf.update()
     
-    def btn2_cmd(self):
-        for btn in self.btn1, self.btn2:
+    def btn_r_cmd(self):
+        for btn in self.btn_1, self.btn_r:
             btn.configure(state='normal')
 
-    def build_Loader(self):
-        self.btn1 = ttk.Button(
-            self.root,
+    def build_widget(self):
+        self.btn_1 = ttk.Button(
+            self,
             text='Подгрузить данные о файле',
-            command=self.btn1_cmd
+            command=self.btn_1_cmd
         )            
-        self.btn2 = ttk.Button(
-            self.root,
+        self.btn_r = ttk.Button(
+            self,
             text='Enable state!',
-            command=self.btn2_cmd
+            command=self.btn_r_cmd
         )
-        self.inf_label = tk.Text(
-            self.root,
+        self.label_inf = ttk.Label(
+            self,
             textvariable=self.st_var,
             background='pink',
-            width=40
+            width=100
         )
+        self.btn_1.pack(fill='x', expand='yes')
+        self.label_inf.pack(fill='x', expand='yes')
+        self.btn_r.pack(fill='x', expand='yes')
     
     def start_widget(self):
-        self.btn1.pack(fill='x', expand='yes')
-        self.inf_label.pack(fill='x', expand='yes')
-        self.btn2.pack(fill='x', expand='yes')
-        self.root.mainloop()
+        self.pack(fill='both', expand='yes')
+        self.mainloop()
 
+class DateBox(tk.Frame):
+    def __init__(self, parent=None, **kwargs):
+        tk.Frame.__init__(self, parent, **kwargs)
+        self.years = list(range(2016, 2020, 1))
+        self.months_to_ints = {
+            'Январь': 1,
+            'Февраль': 2,
+            'Март': 3,
+            'Апрель': 4,
+            'Май': 5,
+            'Июнь': 6,
+            'Июль': 7,
+            'Август': 8,
+            'Сентябрь': 9,
+            'Октябрь': 10,
+            'Ноябрь': 11,
+            'Декабрь': 12
+        }
+        self.months = [
+            'Январь', 'Февраль', 'Март', 'Май', 'Июнь', 'Июль',
+            'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            ]
+        self.days = list(range(1,32,1))
+        self.entr = None
+        self.cmb_1 = None
+        self.cmb_2 = None
+        self.label = None
+        self.label_inf = None
+        self.label_inf_var = tk.StringVar(value='Введите год!')
+        self.year_var = tk.StringVar()
+        self.month_var = tk.StringVar()
+        self.day_var = tk.StringVar()
+        self.cmd_b_1 = None
+    
+    def validation_test(self):
+        content = self.year_var.get()
+        if (
+            content.isdigit()
+            and len(content) == 4
+            and content[:3] == '201'
+        ):
+            self.cmd_b_1.configure(state='disabled')
+            self.entr.configure(state='readonly')
+            for wdgt in self.cmb_1, self.cmb_2:
+                wdgt.configure(state='normal')
+            return True
+        else:
+            self.label_inf_var.set('Введите год, начиная с 2016')   
+    
+    def build_widget(self):
+        self.entr = ttk.Entry(
+            self,
+            textvariable=self.year_var,
+        )
+        self.cmd_b_1 = ttk.Button(
+            self,
+            text='Validate!',
+            command=self.validation_test
+        )
+        self.cmb_1 = ttk.Combobox(
+            self,
+            values=self.months,
+            textvariable=self.month_var
+        )
+        self.cmb_2 = ttk.Combobox(
+            self,
+            values=self.days,
+            textvariable=self.day_var
+        )
+        for wdgt in self.cmb_1, self.cmb_2:
+            wdgt.configure(state='disabled')
 
-
-
-
+        self.label = ttk.Label(self, textvariable=self.label_inf_var)
+        self.label_inf_y = ttk.Label(self, textvariable=self.year_var, anchor='center')
+        self.label_inf_m = ttk.Label(self, textvariable=self.month_var, anchor='center')
+        self.label_inf_d = ttk.Label(self, textvariable=self.day_var, anchor='center')
+        self.label.pack(fill='x', expand='yes')
+        self.entr.pack(fill='x', expand='yes')
+        self.cmd_b_1.pack(fill='x', expand='yes')
+        self.cmb_1.pack(fill='x', expand='yes')
+        self.cmb_2.pack(fill='x', expand='yes')
+        self.label_inf_d.pack(side='left', fill='x', expand='yes')
+        self.label_inf_m.pack(side='left', fill='x', expand='yes')
+        self.label_inf_y.pack(side='left', fill='x', expand='yes')
+        self.label_inf_m = ttk.Label(self, textvariable=self.month_var)
+    
+    def start_widget(self):
+        self.pack(fill='both', expand='yes')
+        self.mainloop()
