@@ -15,6 +15,23 @@ from datetime import date
 
 from guidialogs import ffp, fdp
 
+class AutoScrollbar(ttk.Scrollbar):
+    # http://effbot.org/zone/tkinter-autoscrollbar.htm
+    # a scrollbar that hides itself if it's not needed.  only
+    # works if you use the grid geometry manager.
+    def set(self, lo, hi):
+        if float(lo) <= 0.0 and float(hi) >= 1.0:
+            # grid_remove is currently missing from Tkinter!
+            self.tk.call("grid", "remove", self)
+        else:
+            self.grid()
+        ttk.Scrollbar.set(self, lo, hi)
+    def pack(self, **kw):
+        raise "cannot use pack with this widget"
+    def place(self, **kw):
+        raise "cannot use place with this widget"
+
+
 class TreeviewBuilder(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
@@ -160,24 +177,14 @@ class DateBox(tk.Frame):
         tk.Frame.__init__(self, parent, **kwargs)
         self.years = list(range(2016, 2020, 1))
         self.months_to_ints = {
-            'Январь': 1,
-            'Февраль': 2,
-            'Март': 3,
-            'Апрель': 4,
-            'Май': 5,
-            'Июнь': 6,
-            'Июль': 7,
-            'Август': 8,
-            'Сентябрь': 9,
-            'Октябрь': 10,
-            'Ноябрь': 11,
-            'Декабрь': 12
+            'Январь': 1, 'Февраль': 2, 'Март': 3, 'Апрель': 4,
+            'Май': 5, 'Июнь': 6, 'Июль': 7, 'Август': 8,
+            'Сентябрь': 9, 'Октябрь': 10, 'Ноябрь': 11, 'Декабрь': 12
         }
         self.months = [
-            'Январь', 'Февраль', 'Март', 'Май', 'Июнь', 'Июль',
-            'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+            'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
             ]
-        self.days = list(range(1,32,1))
         self.entr = None
         self.cmb_1 = None
         self.cmb_2 = None
@@ -187,45 +194,58 @@ class DateBox(tk.Frame):
         self.year_var = tk.StringVar()
         self.month_var = tk.StringVar()
         self.day_var = tk.StringVar()
-        self.cmd_b_1 = None
     
-    def validation_test(self):
+    def validation_test(self, event):
         content = self.year_var.get()
         if (
             content.isdigit()
             and len(content) == 4
             and content[:3] == '201'
         ):
-            self.cmd_b_1.configure(state='disabled')
             self.entr.configure(state='readonly')
             for wdgt in self.cmb_1, self.cmb_2:
                 wdgt.configure(state='normal')
             return True
         else:
-            self.label_inf_var.set('Введите год, начиная с 2016')   
+            self.label_inf_var.set('Введите год, начиная с 2016')
+    
+    def month_range(self, event):
+        month_code = self.cmb_1.current()+1
+        self.month_var.set('{:0>2d}'.format(month_code))
+        days_in_month = calendar.monthrange(
+            int(self.year_var.get()),
+            month_code
+        )[1]
+        self.cmb_2.configure(values=list(range(1, days_in_month+1, 1)))
+
+    def convert_date(self, event):
+        current_date = date(
+            int(self.year_var.get()),
+            self.cmb_1.current()+1,
+            int(self.day_var.get())
+        )
+        print(current_date)
+        self.current_date = current_date
     
     def build_widget(self):
         self.entr = ttk.Entry(
             self,
             textvariable=self.year_var,
         )
-        self.cmd_b_1 = ttk.Button(
-            self,
-            text='Validate!',
-            command=self.validation_test
-        )
+        self.entr.bind('<FocusOut>', self.validation_test)
+
         self.cmb_1 = ttk.Combobox(
             self,
-            values=self.months,
-            textvariable=self.month_var
+            values=self.months
         )
+        self.cmb_1.bind('<<ComboboxSelected>>', self.month_range)
+
         self.cmb_2 = ttk.Combobox(
             self,
-            values=self.days,
             textvariable=self.day_var
         )
-        for wdgt in self.cmb_1, self.cmb_2:
-            wdgt.configure(state='disabled')
+        self.cmb_2.configure(state='disabled')
+        self.cmb_2.bind('<<ComboboxSelected>>', self.convert_date)
 
         self.label = ttk.Label(self, textvariable=self.label_inf_var)
         self.label_inf_y = ttk.Label(self, textvariable=self.year_var, anchor='center')
@@ -233,7 +253,6 @@ class DateBox(tk.Frame):
         self.label_inf_d = ttk.Label(self, textvariable=self.day_var, anchor='center')
         self.label.pack(fill='x', expand='yes')
         self.entr.pack(fill='x', expand='yes')
-        self.cmd_b_1.pack(fill='x', expand='yes')
         self.cmb_1.pack(fill='x', expand='yes')
         self.cmb_2.pack(fill='x', expand='yes')
         self.label_inf_d.pack(side='left', fill='x', expand='yes')
@@ -243,4 +262,40 @@ class DateBox(tk.Frame):
     
     def start_widget(self):
         self.pack(fill='both', expand='yes')
+        self.mainloop()
+
+
+class InfoText(tk.Frame):
+    def __init__(self, parent=None, **kwargs):
+        tk.Frame.__init__(self, parent, **kwargs)
+        self.text = None
+        self.scroll = None
+        self.btn_1 = None
+    
+    def btn_1_cmd(self):
+        st = open
+        #self.text.configure(state='normal')
+        self.text.insert('1.0', st)
+        #self.text.configure(state='disabled')
+    
+    def build_widget(self):
+        self.text = tk.Text(self)#, state='disabled')
+        self.scroll = AutoScrollbar(
+            self,
+            orient='vertical',
+            command=self.text.yview
+        )
+        #self.scroll = ttk.Scrollbar(
+        #    self,
+        #    orient='vertical',
+        #    command=self.text.yview
+        #)
+        self.text.configure(yscrollcommand=self.scroll.set)
+        self.btn_1 = ttk.Button(self, text='Fill widget!', command=self.btn_1_cmd)
+        self.text.grid(column=0, row=0, sticky='we')
+        self.scroll.grid(column=1, row=0, sticky='nwse')
+        self.btn_1.grid(column=2, row=1, sticky='we')
+    
+    def start_widget(self):
+        self.grid(column=0, row=0, sticky='nwse')
         self.mainloop()

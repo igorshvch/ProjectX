@@ -76,7 +76,7 @@ def text_to_dct(text):
         '31':[],
         '34':[]
     }
-    spl = text.split('\n')
+    spl = text.strip().split('\n')
     spl = [line.split('\t') for line in spl]
     for line in spl:
         if re.search(r'(?<=Д=)4', line[1]):
@@ -90,8 +90,13 @@ def text_to_dct(text):
     return dct
 
 def save_dct(dct, folder_path):
+    today = date.today()
     for key in dct:
-        rwtools.save_object(dct[key], 'cnl_raw_{}'.format(key), folder_path)
+        rwtools.save_object(
+            dct[key],
+            '{}-cnl_raw_{}'.format(today, key),
+            folder_path
+        )
 
 def result_script(path_to_param_file):
     params = {}
