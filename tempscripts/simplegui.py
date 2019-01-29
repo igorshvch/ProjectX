@@ -127,6 +127,53 @@ class TreeviewBuilder(ttk.Frame):
         self.pack(fill='both', expand='yes')
         self.mainloop()
 
+class FilePaths(ttk.Frame):
+    def __init__(self, parent=None, **kwargs):
+        tk.Frame.__init__(self, parent, **kwargs)
+        self.l_1_var = tk.StringVar()
+        self.l_2_var = tk.StringVar()
+        self.btn_1 = None
+        self.btn_2 = None
+        self.label_1 = None
+        self.label_2 = None
+    
+    def cmd_1(self):
+        folder_path = fdp()
+        if len(folder_path) >= 100:
+            folder_path = '...'+folder_path[-93:]
+        self.l_1_var.set(folder_path)
+    
+    def cmd_2(self):
+        file_path = ffp()
+        if len(file_path) >= 100:
+            file_path = '...'+file_path[-97:]
+        self.l_2_var.set(file_path)
+    
+    def build_widget(self):
+        self.btn_1 = ttk.Button(
+            self,
+            text='Путь к актам',
+            command=self.cmd_1,
+            width=16
+        )
+        self.btn_2 = ttk.Button(
+            self,
+            text='Путь к кирпичам',
+            command=self.cmd_2,
+            width=16
+        )
+        self.label_1 = ttk.Label(self, textvariable=self.l_1_var, width=100)
+        self.label_2 = ttk.Label(self, textvariable=self.l_2_var, width=100)
+        
+        self.btn_1.grid(column=0, row=0)
+        self.btn_2.grid(column=0, row=1)
+        self.label_1.grid(column=1, row=0)
+        self.label_2.grid(column=1, row=1)
+    
+    def start_widget(self):
+        self.grid(column=0, row=0, sticky='nwse')
+        self.mainloop()
+
 
 class Filesloader(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
@@ -273,13 +320,15 @@ class InfoText(tk.Frame):
         self.btn_1 = None
     
     def btn_1_cmd(self):
-        st = open
-        #self.text.configure(state='normal')
+        with open(ffp(), mode='r') as file:
+            st = file.read()
+        st = st.replace('\n', '\n\t')
+        self.text.configure(state='normal')
         self.text.insert('1.0', st)
-        #self.text.configure(state='disabled')
+        self.text.configure(state='disabled')
     
     def build_widget(self):
-        self.text = tk.Text(self)#, state='disabled')
+        self.text = tk.Text(self, state='disabled')
         self.scroll = AutoScrollbar(
             self,
             orient='vertical',
