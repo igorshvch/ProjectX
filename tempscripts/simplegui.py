@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 import calendar
 from datetime import date
+import random
 #leap yeasr formula:
 #366 if ((year%4 == 0 and year%100 != 0) or (year%400 == 0)) else 365
 
@@ -38,17 +39,34 @@ class TreeviewBuilder(ttk.Frame):
         self.info = None
         self.tv = None
         self.btn_1 = None
-        self.data = None
+        self.data = {
+            'raw_concls':[]
+        }
         self.sort_flag_0 = False
         self.sort_flag_1 = False
         self.sort_flag_2 = False
+        self.counter = tk.IntVar()
     
     def btn_1_cmd(self):
-        #print(self.tv.selection())
-        if not self.tv.selection():
-            return None
-        for i in self.tv.selection():
-            print(self.tv.item(i))
+        pass
+        #self.tv.delete(*self.tv.get_children())
+        #self.data.setdefault('raw_concls', []).append((random.randint(1,9), 'НДС', 'ДА'))
+        #print(len(self.data['raw_concls']))
+        #for triple in self.data['raw_concls']:
+        #    key, val1, val2 = triple
+        #    self.tv.insert(
+        #        '',
+        #        'end',
+        #        text=key,
+        #        values=(val1, val2)
+        #    )
+        #self.counter.set(len(self.tv.get_children()))
+    
+    #def btn_2_cmd(self):
+    #    if not self.tv.selection():
+    #        return None
+    #    for i in self.tv.selection():
+    #        print(self.tv.item(i))
 
     def define(self, event):
         region = self.tv.identify('region', event.x, event.y)
@@ -58,60 +76,71 @@ class TreeviewBuilder(ttk.Frame):
     
     def sort0(self):
         self.tv.delete(*self.tv.get_children())
-        self.data = sorted(self.data, key=lambda x: x[0], reverse=self.sort_flag_0)
+        self.data['raw_concls'] = sorted(self.data['raw_concls'], key=lambda x: x[0], reverse=self.sort_flag_0)
         self.sort_flag_0 = not self.sort_flag_0
-        for triple in self.data:
-            key, val1, val2 = triple
+        for pair in self.data['raw_concls']:
+            key, val1 = pair
             self.tv.insert(
                 '',
                 'end',
                 text=key,
-                values=(val1, val2)
+                values=val1
             )
     
     def sort1(self):
         self.tv.delete(*self.tv.get_children())
-        self.data = sorted(self.data, key=lambda x: x[1], reverse=self.sort_flag_1)
+        self.data['raw_concls'] = sorted(self.data['raw_concls'], key=lambda x: x[1], reverse=self.sort_flag_1)
         self.sort_flag_1 = not self.sort_flag_1
-        for triple in self.data:
-            key, val1, val2 = triple
+        for pair in self.data['raw_concls']:
+            key, val1 = pair
             self.tv.insert(
                 '',
                 'end',
                 text=key,
-                values=(val1, val2)
+                values=val1
             )
     
-    def sort2(self):
-        self.tv.delete(*self.tv.get_children())
-        self.data = sorted(self.data, key=lambda x: x[2], reverse=self.sort_flag_2)
-        self.sort_flag_2 = not self.sort_flag_2
-        for triple in self.data:
-            key, val1, val2 = triple
-            self.tv.insert(
-                '',
-                'end',
-                text=key,
-                values=(val1, val2)
-            )
+    #def sort2(self):
+    #    self.tv.delete(*self.tv.get_children())
+    #    self.data['raw_concls'] = sorted(self.data['raw_concls'], key=lambda x: x[2], reverse=self.sort_flag_2)
+    #    self.sort_flag_2 = not self.sort_flag_2
+    #    for triple in self.data['raw_concls']:
+    #        key, val1, val2 = triple
+    #        self.tv.insert(
+    #            '',
+    #            'end',
+    #            text=key,
+    #            values=(val1, val2)
+    #        )
 
-    def build_widget(self, head, cols, data):
-        self.data = data
-        self.btn_1 = ttk.Button(self, text='Print selected', command=self.btn_1_cmd)
+    def build_widgets(self):
+        #cols = ('ЭСС', 'Актуален?')
+        cols = ('ЭСС',)
+
+        self.btn_1 = ttk.Button(
+            self,
+            text='Загрузить кирпичи',
+            command=self.btn_1_cmd
+        )
+
+        self.label_inf = ttk.Label(
+            self,
+            textvariable=self.counter,
+            width=4,
+            anchor='e'
+        )
+        #self.btn_2 = ttk.Button(
+        #    self,
+        #    text='Подробнее',
+        #    command=self.btn_2_cmd
+        #)
+
         self.tv = ttk.Treeview(self, columns=cols)
-        self.tv.heading('#0', text=head, command=self.sort0)
+        self.tv.heading('#0', text='Кирпич', command=self.sort0)
         self.tv.column('#0', width=100, stretch=True)
-        for i, cmd in zip(cols, (self.sort1, self.sort2)):
+        for i, cmd in zip(cols, (self.sort1, )):#self.sort2)):
             self.tv.heading(i, text=str(i), command=cmd)
-            self.tv.column(i, width=40, stretch=True)
-        for triple in data:
-            key, val1, val2, = triple
-            self.tv.insert(
-                '',
-                'end',
-                text=key,
-                values=(val1, val2)
-            )
+            self.tv.column(i, width=65, stretch=True)
         #tv.bind('<Double-3>', lambda x: inner_f(x))
         #tv.bind('<Double-1>', lambda x: print(tv.item(tv.identify('item', x.x, x.y))))
         #tv.bind('<Double-2>', lambda x: print(tv.get_children('')))
@@ -120,109 +149,139 @@ class TreeviewBuilder(ttk.Frame):
             '<Double-1>',
             lambda x: print(self.tv.item(self.tv.identify('item', x.x, x.y)))
         )
-        self.btn_1.pack(fill='x', expand='yes')
-        self.tv.pack(fill='x', expand='yes')
+        self.scroll = AutoScrollbar(
+                    self,
+                    orient='vertical',
+                    command=self.tv.yview
+                )
+        self.tv.configure(yscrollcommand=self.scroll.set)
+    
+    def grid_inner_widgets(self):
+        #self.grid(column=0, row=0, sticky='nwse')
+        self.tv.grid(column=0, row=0, columnspan=2, sticky='we')
+        self.btn_1.grid(column=0, row=1, sticky='we')
+        self.label_inf.grid(column=1, row=1, sticky='we')
+        self.scroll.grid(column=2, row=0, sticky='nes')
+        #self.btn_2.grid(column=1, row=1, sticky='we')
+        #self.columnconfigure(0, weight=1)
+        #self.columnconfigure(1, weight=1)
     
     def start_widget(self):
-        self.pack(fill='both', expand='yes')
+        self.build_widgets()
+        self.grid_inner_widgets()
         self.mainloop()
+
 
 class FilePaths(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
         tk.Frame.__init__(self, parent, **kwargs)
+        self.data = {
+            'texts_folder_path': None,
+            'path_to_raw_cnls': None,
+            'res_folder_path': None
+        }
         self.l_1_var = tk.StringVar()
         self.l_2_var = tk.StringVar()
+        self.l_3_var = tk.StringVar()
         self.btn_1 = None
         self.btn_2 = None
+        self.btn_3 = None
         self.label_1 = None
         self.label_2 = None
+        self.label_3 = None
     
     def cmd_1(self):
         folder_path = fdp()
-        if len(folder_path) >= 100:
-            folder_path = '...'+folder_path[-93:]
+        self.data['texts_folder_path'] = folder_path
+        #if len(folder_path) >= 100:
+        #    folder_path = '...'+folder_path[-93:]
         self.l_1_var.set(folder_path)
     
     def cmd_2(self):
         file_path = ffp()
+        self.data['path_to_raw_cnls'] = file_path
         if len(file_path) >= 100:
             file_path = '...'+file_path[-97:]
         self.l_2_var.set(file_path)
     
-    def build_widget(self):
+    def cmd_3(self):
+        folder_path = fdp()
+        self.data['res_folder_path'] = folder_path
+        if len(folder_path) >= 100:
+            folder_path = '...'+folder_path[-93:]
+        self.l_3_var.set(folder_path)
+    
+    def build_widgets(self):
         self.btn_1 = ttk.Button(
             self,
-            text='Путь к актам',
+            text='Путь к суд.актам',
             command=self.cmd_1,
-            width=16
+            width=17
         )
         self.btn_2 = ttk.Button(
             self,
             text='Путь к кирпичам',
             command=self.cmd_2,
-            width=16
+            width=17
         )
-        self.label_1 = ttk.Label(self, textvariable=self.l_1_var, width=100)
-        self.label_2 = ttk.Label(self, textvariable=self.l_2_var, width=100)
-        
-        self.btn_1.grid(column=0, row=0)
-        self.btn_2.grid(column=0, row=1)
-        self.label_1.grid(column=1, row=0)
-        self.label_2.grid(column=1, row=1)
+        self.btn_3 = ttk.Button(
+            self,
+            text='Путь сохранения',
+            command=self.cmd_3,
+            width=17
+        )
+        self.label_1 = ttk.Label(
+            self,
+            textvariable=self.l_1_var,
+            anchor='w',
+            width=100,
+            relief='sunken'
+        )
+        self.label_2 = ttk.Label(
+            self,
+            textvariable=self.l_2_var,
+            anchor='w',
+            width=100,
+            relief='sunken'
+        )
+        self.label_3 = ttk.Label(
+            self,
+            textvariable=self.l_3_var,
+            anchor='w',
+            width=100,
+            relief='sunken'
+        )
+    
+    def grid_inner_widgets(self):
+        #self.grid(column=0, row=0, sticky='nwse')
+        self.btn_1.grid(column=0, row=0, sticky='w')
+        self.btn_2.grid(column=0, row=1, sticky='w')
+        self.btn_3.grid(column=0, row=2, sticky='w')
+        self.label_1.grid(column=1, row=0, sticky='w')
+        self.label_2.grid(column=1, row=1, sticky='w')
+        self.label_3.grid(column=1, row=2, sticky='w')
+        #self.grid(column=0, row=0, sticky='nwse')
+        #self.columnconfigure(0, weight=1)
+        #self.columnconfigure(1, weight=1)
     
     def start_widget(self):
-        self.grid(column=0, row=0, sticky='nwse')
+        self.build_widgets()
+        #self.grid(column=0, row=0, sticky='nwse')
+        #self.columnconfigure(0, weight=1)
+        #self.columnconfigure(1, weight=1)
+        self.grid_inner_widgets()
         self.mainloop()
 
-
-class Filesloader(ttk.Frame):
-    def __init__(self, parent=None, **kwargs):
-        ttk.Frame.__init__(self, parent, **kwargs)
-        self.st_var = None
-        self.btn_1 = None
-        self.btn_r = None
-        self.label_inf = None
-        self.st_var = tk.StringVar()
-    
-    def btn_1_cmd(self):
-        self.path = ffp()
-        self.st_var.set(self.path)
-        self.btn_1.configure(state='disabled')
-        self.label_inf.update()
-    
-    def btn_r_cmd(self):
-        for btn in self.btn_1, self.btn_r:
-            btn.configure(state='normal')
-
-    def build_widget(self):
-        self.btn_1 = ttk.Button(
-            self,
-            text='Подгрузить данные о файле',
-            command=self.btn_1_cmd
-        )            
-        self.btn_r = ttk.Button(
-            self,
-            text='Enable state!',
-            command=self.btn_r_cmd
-        )
-        self.label_inf = ttk.Label(
-            self,
-            textvariable=self.st_var,
-            background='pink',
-            width=100
-        )
-        self.btn_1.pack(fill='x', expand='yes')
-        self.label_inf.pack(fill='x', expand='yes')
-        self.btn_r.pack(fill='x', expand='yes')
-    
-    def start_widget(self):
-        self.pack(fill='both', expand='yes')
-        self.mainloop()
 
 class DateBox(tk.Frame):
     def __init__(self, parent=None, **kwargs):
         tk.Frame.__init__(self, parent, **kwargs)
-        self.years = list(range(2016, 2020, 1))
+        self.data = {
+            'year': None,
+            'month': None,
+            'day': None
+        }
+        self.years = list(range(2017, 2020, 1))
         self.months_to_ints = {
             'Январь': 1, 'Февраль': 2, 'Март': 3, 'Апрель': 4,
             'Май': 5, 'Июнь': 6, 'Июль': 7, 'Август': 8,
@@ -232,83 +291,111 @@ class DateBox(tk.Frame):
             'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
             'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
             ]
-        self.entr = None
         self.cmb_1 = None
         self.cmb_2 = None
-        self.label = None
-        self.label_inf = None
-        self.label_inf_var = tk.StringVar(value='Введите год!')
+        self.cmb_3 = None
+        self.label_h = None
         self.year_var = tk.StringVar()
         self.month_var = tk.StringVar()
         self.day_var = tk.StringVar()
     
-    def validation_test(self, event):
-        content = self.year_var.get()
-        if (
-            content.isdigit()
-            and len(content) == 4
-            and content[:3] == '201'
-        ):
-            self.entr.configure(state='readonly')
-            for wdgt in self.cmb_1, self.cmb_2:
-                wdgt.configure(state='normal')
-            return True
-        else:
-            self.label_inf_var.set('Введите год, начиная с 2016')
+    def store_year(self, event):
+        year = int(self.year_var.get())
+        self.data['year'] = year
+        self.cmb_2.configure(state='normal')
     
-    def month_range(self, event):
-        month_code = self.cmb_1.current()+1
-        self.month_var.set('{:0>2d}'.format(month_code))
+    def store_month(self, event):
+        month_code = self.cmb_2.current()+1
+        self.data['month'] = month_code
+        self.month_var.set('{:0>2d}.'.format(month_code))
         days_in_month = calendar.monthrange(
-            int(self.year_var.get()),
-            month_code
+            self.data['year'],
+            self.data['month']
         )[1]
-        self.cmb_2.configure(values=list(range(1, days_in_month+1, 1)))
-
-    def convert_date(self, event):
-        current_date = date(
-            int(self.year_var.get()),
-            self.cmb_1.current()+1,
-            int(self.day_var.get())
+        self.cmb_3.configure(
+            values=list(range(1, days_in_month+1, 1)),
+            state='normal'
         )
-        print(current_date)
-        self.current_date = current_date
+
+    def store_day(self, event):
+        day_code = self.cmb_3.current()+1
+        self.data['day'] = day_code
+        self.day_var.set('{:0>2d}.'.format(day_code))
+        print(
+            '{:4d}-{:0>2d}-{:0>2d}'.format(
+                self.data['year'],
+                self.data['month'],
+                self.data['day']
+            )
+        )
     
-    def build_widget(self):
-        self.entr = ttk.Entry(
-            self,
-            textvariable=self.year_var,
-        )
-        self.entr.bind('<FocusOut>', self.validation_test)
-
+    def build_widgets(self):
         self.cmb_1 = ttk.Combobox(
             self,
-            values=self.months
+            values=('2017', '2018', '2019'),
+            textvariable=self.year_var,
+            width=10
         )
-        self.cmb_1.bind('<<ComboboxSelected>>', self.month_range)
+        self.cmb_1.bind('<<ComboboxSelected>>', self.store_year)
 
         self.cmb_2 = ttk.Combobox(
             self,
-            textvariable=self.day_var
+            values=self.months,
+            width=10,
+            state='disabled'
         )
-        self.cmb_2.configure(state='disabled')
-        self.cmb_2.bind('<<ComboboxSelected>>', self.convert_date)
+        self.cmb_2.bind('<<ComboboxSelected>>', self.store_month)
 
-        self.label = ttk.Label(self, textvariable=self.label_inf_var)
-        self.label_inf_y = ttk.Label(self, textvariable=self.year_var, anchor='center')
-        self.label_inf_m = ttk.Label(self, textvariable=self.month_var, anchor='center')
-        self.label_inf_d = ttk.Label(self, textvariable=self.day_var, anchor='center')
-        self.label.pack(fill='x', expand='yes')
-        self.entr.pack(fill='x', expand='yes')
-        self.cmb_1.pack(fill='x', expand='yes')
-        self.cmb_2.pack(fill='x', expand='yes')
-        self.label_inf_d.pack(side='left', fill='x', expand='yes')
-        self.label_inf_m.pack(side='left', fill='x', expand='yes')
-        self.label_inf_y.pack(side='left', fill='x', expand='yes')
-        self.label_inf_m = ttk.Label(self, textvariable=self.month_var)
+        self.cmb_3 = ttk.Combobox(
+            self,
+            width=10,
+            state='disabled'
+        )
+        self.cmb_3.bind('<<ComboboxSelected>>', self.store_day)
+
+        self.label_h = ttk.Label(self, text='Дата', anchor='center')
+        self.label_inf_y = ttk.Label(
+            self,
+            textvariable=self.year_var,
+            anchor='w',
+            width=4,
+            relief='sunken'
+        )
+        self.label_inf_m = ttk.Label(
+            self,
+            textvariable=self.month_var,
+            anchor='center',
+            width=3,
+            relief='sunken'
+        )
+        self.label_inf_d = ttk.Label(
+            self,
+            textvariable=self.day_var,
+            anchor='e',
+            width=3,
+            relief='sunken'
+        )
+    
+    def grid_inner_widgets(self):
+        #self.grid(column=0, row=0, sticky='nwse')
+        self.label_h.grid(column=0, row=0, columnspan=3, sticky='we')
+        self.cmb_1.grid(column=0, row=1, columnspan=3, sticky='we')
+        self.cmb_2.grid(column=0, row=2, columnspan=3, sticky='we')
+        self.cmb_3.grid(column=0, row=3, columnspan=3, sticky='we')
+        self.label_inf_d.grid(column=0, row=4, sticky='w')
+        self.label_inf_m.grid(column=1, row=4, sticky='w')
+        self.label_inf_y.grid(column=2, row=4, sticky='w')
+        #self.columnconfigure(0, weight=1)
+        #self.columnconfigure(1, weight=1)
+        #self.columnconfigure(2, weight=1)
     
     def start_widget(self):
-        self.pack(fill='both', expand='yes')
+        self.build_widgets()
+        self.grid(column=0, row=0, sticky='nwse')
+        self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(2, weight=1)
+        self.grid_inner_widgets()
         self.mainloop()
 
 
@@ -319,32 +406,69 @@ class InfoText(tk.Frame):
         self.scroll = None
         self.btn_1 = None
     
-    def btn_1_cmd(self):
-        with open(ffp(), mode='r') as file:
-            st = file.read()
-        st = st.replace('\n', '\n\t')
-        self.text.configure(state='normal')
-        self.text.insert('1.0', st)
-        self.text.configure(state='disabled')
+    #def btn_1_cmd(self):
+    #    with open(ffp(), mode='r') as file:
+    #        st = file.read()
+    #    st = st.replace('\n', '\n\t')
+    #    self.text.configure(state='normal')
+    #    self.text.insert('1.0', st)
+    #    self.text.configure(state='disabled')
     
-    def build_widget(self):
+    def build_widgets(self):
         self.text = tk.Text(self, state='disabled')
         self.scroll = AutoScrollbar(
             self,
             orient='vertical',
             command=self.text.yview
         )
-        #self.scroll = ttk.Scrollbar(
-        #    self,
-        #    orient='vertical',
-        #    command=self.text.yview
-        #)
         self.text.configure(yscrollcommand=self.scroll.set)
-        self.btn_1 = ttk.Button(self, text='Fill widget!', command=self.btn_1_cmd)
-        self.text.grid(column=0, row=0, sticky='we')
-        self.scroll.grid(column=1, row=0, sticky='nwse')
-        self.btn_1.grid(column=2, row=1, sticky='we')
+    
+    def grid_inner_widgets(self):
+        #self.grid(column=0, row=0, sticky='nwse')
+        self.text.grid(column=0, row=0, sticky='nwse')
+        self.scroll.grid(column=1, row=0, sticky='nes')
+        #self.columnconfigure(0, weight=1)
+        #self.columnconfigure(1, weight=1)
+        #self.rowconfigure(0, weight=1)
     
     def start_widget(self):
-        self.grid(column=0, row=0, sticky='nwse')
+        self.build_widgets()
+        self.grid_inner_widgets()
         self.mainloop()
+
+
+class MainLogic():
+    def __init__(self):
+        self.root = tk.Tk()
+        self.data = {}
+        self.build_widgets()
+    
+    def build_widgets(self):
+        root = self.root
+        self.wdgts = {
+            'tv': TreeviewBuilder(root),
+            'fp': FilePaths(root),
+            'db': DateBox(root),
+            'it': InfoText(root)
+        }
+        for key in self.wdgts:
+            self.data.update(self.wdgts[key].data)
+            self.wdgts[key].build_widgets()
+            self.wdgts[key].grid_inner_widgets()
+        self.wdgts['fp'].grid(column=0, row=0, columnspan=2, sticky='we')
+        self.wdgts['fp'].columnconfigure(1, weight=1)
+        self.wdgts['db'].grid(column=0, row=1, sticky='we')
+        self.wdgts['tv'].grid(column=0, row=2, sticky='n')
+        self.wdgts['it'].grid(column=1, row=1, rowspan=3, sticky='nwse')
+        self.wdgts['it'].columnconfigure(0, weight=1)
+        self.wdgts['it'].rowconfigure(0, weight=1)
+        root.columnconfigure(1, weight=1)
+        root.rowconfigure(2, weight=1)
+        root.update()
+        root.minsize(root.winfo_width(), root.winfo_height())
+    
+    def upload_concls(self):
+        pass
+    
+    def start_widget(self):
+        self.root.mainloop()
