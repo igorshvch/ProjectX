@@ -89,6 +89,21 @@ def text_to_dct(text):
             dct['34'].append(line[0])
     return dct
 
+def text_to_tuples(text):
+    holder = []
+    spl = text.strip().split('\n')
+    spl = [line.split('\t') for line in spl]
+    for line in spl:
+        if re.search(r'(?<=Д=)4', line[1]):
+            holder.append((line[0], 'НДС'))
+        elif re.search(r'(?<=Д=)9', line[1]):
+            holder.append((line[0], 'НП'))
+        elif re.search(r'(?<=Д=)31', line[1]):
+            holder.append((line[0], 'НДФЛ_СВ'))
+        elif re.search(r'(?<=Д=)34', line[1]):
+            holder.append((line[0], 'Ч1_НК'))
+    return holder
+
 def save_dct(dct, folder_path):
     today = date.today()
     for key in dct:

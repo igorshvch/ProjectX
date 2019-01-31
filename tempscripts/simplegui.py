@@ -8,13 +8,27 @@
 
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog as fd
 import calendar
 from datetime import date
 import random
 #leap yeasr formula:
 #366 if ((year%4 == 0 and year%100 != 0) or (year%400 == 0)) else 365
 
-from guidialogs import ffp, fdp
+#from guidialogs import ffp, fdp
+from tempscripts import tempmain as tpm
+from textproc import rwtools, conclprep as cnp
+
+PATHS = {
+    'НДС': r'C:\Users\EA-ShevchenkoIS\ProjectX\CommonData\PPN\PPN_4.txt',
+    'НП': r'C:\Users\EA-ShevchenkoIS\ProjectX\CommonData\PPN\PPN_9.txt',
+    'НДФЛ_СВ': r'C:\Users\EA-ShevchenkoIS\ProjectX\CommonData\PPN\PPN_31.txt',
+    'Ч1_НК': r'C:\Users\EA-ShevchenkoIS\ProjectX\CommonData\PPN\PPN_34.txt',
+    'stpw': (
+        r'C:\Users\EA-ShevchenkoIS\ProjectX\CommonData\custom_stpw_wo_objections'
+    ),
+    'patterns': r'C:\Users\EA-ShevchenkoIS\ProjectX\patterns.txt'
+}
 
 class AutoScrollbar(ttk.Scrollbar):
     # http://effbot.org/zone/tkinter-autoscrollbar.htm
@@ -36,37 +50,14 @@ class AutoScrollbar(ttk.Scrollbar):
 class TreeviewBuilder(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
+        self.data = {}
         self.info = None
         self.tv = None
         self.btn_1 = None
-        self.data = {
-            'raw_concls':[]
-        }
         self.sort_flag_0 = False
         self.sort_flag_1 = False
         self.sort_flag_2 = False
         self.counter = tk.IntVar()
-    
-    def btn_1_cmd(self):
-        pass
-        #self.tv.delete(*self.tv.get_children())
-        #self.data.setdefault('raw_concls', []).append((random.randint(1,9), 'НДС', 'ДА'))
-        #print(len(self.data['raw_concls']))
-        #for triple in self.data['raw_concls']:
-        #    key, val1, val2 = triple
-        #    self.tv.insert(
-        #        '',
-        #        'end',
-        #        text=key,
-        #        values=(val1, val2)
-        #    )
-        #self.counter.set(len(self.tv.get_children()))
-    
-    #def btn_2_cmd(self):
-    #    if not self.tv.selection():
-    #        return None
-    #    for i in self.tv.selection():
-    #        print(self.tv.item(i))
 
     def define(self, event):
         region = self.tv.identify('region', event.x, event.y)
@@ -75,43 +66,40 @@ class TreeviewBuilder(ttk.Frame):
             return col
     
     def sort0(self):
+        items = []
+        for i in self.tv.get_children():
+            cnl = self.tv.item(i)['text']
+            code = self.tv.item(i)['values'][0]
+            items.append((cnl, code))
         self.tv.delete(*self.tv.get_children())
-        self.data['raw_concls'] = sorted(self.data['raw_concls'], key=lambda x: x[0], reverse=self.sort_flag_0)
+        items = sorted(items, key=lambda x: x[0], reverse=self.sort_flag_0)
         self.sort_flag_0 = not self.sort_flag_0
-        for pair in self.data['raw_concls']:
+        for pair in items:
             key, val1 = pair
             self.tv.insert(
                 '',
                 'end',
                 text=key,
-                values=val1
+                values=(val1,)
             )
-    
+
     def sort1(self):
+        items = []
+        for i in self.tv.get_children():
+            cnl = self.tv.item(i)['text']
+            code = self.tv.item(i)['values'][0]
+            items.append((cnl, code))
         self.tv.delete(*self.tv.get_children())
-        self.data['raw_concls'] = sorted(self.data['raw_concls'], key=lambda x: x[1], reverse=self.sort_flag_1)
-        self.sort_flag_1 = not self.sort_flag_1
-        for pair in self.data['raw_concls']:
+        items = sorted(items, key=lambda x: x[1], reverse=self.sort_flag_0)
+        self.sort_flag_0 = not self.sort_flag_0
+        for pair in items:
             key, val1 = pair
             self.tv.insert(
                 '',
                 'end',
                 text=key,
-                values=val1
+                values=(val1,)
             )
-    
-    #def sort2(self):
-    #    self.tv.delete(*self.tv.get_children())
-    #    self.data['raw_concls'] = sorted(self.data['raw_concls'], key=lambda x: x[2], reverse=self.sort_flag_2)
-    #    self.sort_flag_2 = not self.sort_flag_2
-    #    for triple in self.data['raw_concls']:
-    #        key, val1, val2 = triple
-    #        self.tv.insert(
-    #            '',
-    #            'end',
-    #            text=key,
-    #            values=(val1, val2)
-    #        )
 
     def build_widgets(self):
         #cols = ('ЭСС', 'Актуален?')
@@ -120,14 +108,21 @@ class TreeviewBuilder(ttk.Frame):
         self.btn_1 = ttk.Button(
             self,
             text='Загрузить кирпичи',
-            command=self.btn_1_cmd
+            command= lambda: print('Command not specified!')
+        )
+        self.btn_2 = ttk.Button(
+            self,
+            text='Подготовить выводы',
+            command= lambda: print('Command not specified!'),
+            state='disabled'
         )
 
         self.label_inf = ttk.Label(
             self,
             textvariable=self.counter,
             width=4,
-            anchor='e'
+            anchor='e',
+            relief='sunken'
         )
         #self.btn_2 = ttk.Button(
         #    self,
@@ -157,14 +152,11 @@ class TreeviewBuilder(ttk.Frame):
         self.tv.configure(yscrollcommand=self.scroll.set)
     
     def grid_inner_widgets(self):
-        #self.grid(column=0, row=0, sticky='nwse')
         self.tv.grid(column=0, row=0, columnspan=2, sticky='we')
         self.btn_1.grid(column=0, row=1, sticky='we')
+        self.btn_2.grid(column=0, row=2, columnspan=2, sticky='we')
         self.label_inf.grid(column=1, row=1, sticky='we')
         self.scroll.grid(column=2, row=0, sticky='nes')
-        #self.btn_2.grid(column=1, row=1, sticky='we')
-        #self.columnconfigure(0, weight=1)
-        #self.columnconfigure(1, weight=1)
     
     def start_widget(self):
         self.build_widgets()
@@ -174,7 +166,7 @@ class TreeviewBuilder(ttk.Frame):
 
 class FilePaths(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
-        tk.Frame.__init__(self, parent, **kwargs)
+        ttk.Frame.__init__(self, parent, **kwargs)
         self.data = {
             'texts_folder_path': None,
             'path_to_raw_cnls': None,
@@ -191,21 +183,21 @@ class FilePaths(ttk.Frame):
         self.label_3 = None
     
     def cmd_1(self):
-        folder_path = fdp()
+        folder_path = fd.askdirectory()
         self.data['texts_folder_path'] = folder_path
-        #if len(folder_path) >= 100:
-        #    folder_path = '...'+folder_path[-93:]
+        if len(folder_path) >= 100:
+            folder_path = '...'+folder_path[-93:]
         self.l_1_var.set(folder_path)
     
     def cmd_2(self):
-        file_path = ffp()
+        file_path = fd.askopenfilename()
         self.data['path_to_raw_cnls'] = file_path
         if len(file_path) >= 100:
             file_path = '...'+file_path[-97:]
         self.l_2_var.set(file_path)
     
     def cmd_3(self):
-        folder_path = fdp()
+        folder_path = fd.askdirectory()
         self.data['res_folder_path'] = folder_path
         if len(folder_path) >= 100:
             folder_path = '...'+folder_path[-93:]
@@ -273,9 +265,9 @@ class FilePaths(ttk.Frame):
         self.mainloop()
 
 
-class DateBox(tk.Frame):
+class DateBox(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
-        tk.Frame.__init__(self, parent, **kwargs)
+        ttk.Frame.__init__(self, parent, **kwargs)
         self.data = {
             'year': None,
             'month': None,
@@ -303,6 +295,14 @@ class DateBox(tk.Frame):
         year = int(self.year_var.get())
         self.data['year'] = year
         self.cmb_2.configure(state='normal')
+        if self.data['month'] and self.data['day']:
+            print(
+                '{:4d}-{:0>2d}-{:0>2d}'.format(
+                    self.data['year'],
+                    self.data['month'],
+                    self.data['day']
+                )
+            )
     
     def store_month(self, event):
         month_code = self.cmb_2.current()+1
@@ -316,6 +316,14 @@ class DateBox(tk.Frame):
             values=list(range(1, days_in_month+1, 1)),
             state='normal'
         )
+        if self.data['day']:
+            print(
+                '{:4d}-{:0>2d}-{:0>2d}'.format(
+                    self.data['year'],
+                    self.data['month'],
+                    self.data['day']
+                )
+            )
 
     def store_day(self, event):
         day_code = self.cmb_3.current()+1
@@ -399,9 +407,10 @@ class DateBox(tk.Frame):
         self.mainloop()
 
 
-class InfoText(tk.Frame):
+class InfoText(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
-        tk.Frame.__init__(self, parent, **kwargs)
+        ttk.Frame.__init__(self, parent, **kwargs)
+        self.data = {}
         self.text = None
         self.scroll = None
         self.btn_1 = None
@@ -436,12 +445,50 @@ class InfoText(tk.Frame):
         self.grid_inner_widgets()
         self.mainloop()
 
+class UpperRightButtons(ttk.Frame):
+    def __init__(self, parent=None, **kwargs):
+        ttk.Frame.__init__(self, parent, **kwargs)
+        self.data = {}
+        self.btn_1 = None
+    
+    def cmd_1(self):
+        print('Command not specified!')
+
+    def build_widgets(self):
+        self.btn_1 = ttk.Button(
+            self,
+            text='Подготовить акты',
+            command=self.cmd_1
+        )
+    
+    def grid_inner_widgets(self):
+        self.btn_1.grid(column=0, row=0, sticky='e')
+
+    def start_widget(self):
+        self.grid()
+        self.mainloop()
+
+class lowerLeftBottons(ttk.Frame):
+    def __init__(self, parent=None, **kwargs):
+        ttk.Frame.__init__(self, parent, **kwargs)
+    
+    def build_widgets(self):
+        pass
+    
+    def grid_inner_widgets(self):
+        pass
+
+    def start_widget(self):
+        self.grid()
+        self.mainloop()
+
 
 class MainLogic():
     def __init__(self):
         self.root = tk.Tk()
         self.data = {}
-        self.build_widgets()
+        self.files = {}
+        self.res = {}
     
     def build_widgets(self):
         root = self.root
@@ -449,26 +496,120 @@ class MainLogic():
             'tv': TreeviewBuilder(root),
             'fp': FilePaths(root),
             'db': DateBox(root),
-            'it': InfoText(root)
+            'it': InfoText(root),
+            'urb': UpperRightButtons(root)
         }
         for key in self.wdgts:
-            self.data.update(self.wdgts[key].data)
+            self.data[key] = self.wdgts[key].data
             self.wdgts[key].build_widgets()
             self.wdgts[key].grid_inner_widgets()
+        self.reconfigure()
         self.wdgts['fp'].grid(column=0, row=0, columnspan=2, sticky='we')
         self.wdgts['fp'].columnconfigure(1, weight=1)
-        self.wdgts['db'].grid(column=0, row=1, sticky='we')
-        self.wdgts['tv'].grid(column=0, row=2, sticky='n')
-        self.wdgts['it'].grid(column=1, row=1, rowspan=3, sticky='nwse')
+        self.wdgts['urb'].grid(column=2, row=0, sticky='ne')
+        self.wdgts['db'].grid(column=0, row=2, sticky='we')
+        self.wdgts['tv'].grid(column=0, row=1, sticky='n')
+        self.wdgts['it'].grid(
+            column=1, row=1, columnspan=2, rowspan=3, sticky='nwse'
+        )
         self.wdgts['it'].columnconfigure(0, weight=1)
         self.wdgts['it'].rowconfigure(0, weight=1)
         root.columnconfigure(1, weight=1)
         root.rowconfigure(2, weight=1)
         root.update()
         root.minsize(root.winfo_width(), root.winfo_height())
-    
-    def upload_concls(self):
-        pass
-    
-    def start_widget(self):
         self.root.mainloop()
+    
+    def reconfigure(self):
+        self.wdgts['tv'].btn_1.configure(command=self.upload_concls)
+        self.wdgts['tv'].btn_2.configure(command=self.prepare_concls)
+        self.wdgts['tv'].tv.bind(
+            '<Double-1>',
+            lambda x: self.special_tv_insert(x)
+        )
+        self.wdgts['db'].cmb_1.bind(
+            '<<ComboboxSelected>>',
+            lambda x: self.print_date(x, 'year')
+        )
+        self.wdgts['db'].cmb_2.bind(
+            '<<ComboboxSelected>>',
+            lambda x: self.print_date(x, 'month')
+        )
+        self.wdgts['db'].cmb_3.bind(
+            '<<ComboboxSelected>>',
+            lambda x: self.print_date(x, 'day')
+        )
+
+    def upload_concls(self):
+        self.wdgts['tv'].tv.delete(*self.wdgts['tv'].tv.get_children())
+        if not self.data['fp']['path_to_raw_cnls']:
+            print('Set path to concls!')
+            return None
+        with open(self.data['fp']['path_to_raw_cnls'], mode='r') as f:
+            concls = f.read()
+        concls = tpm.text_to_tuples(concls)
+        for pair in concls:
+            cnl, code = pair
+            self.wdgts['tv'].tv.insert(
+                '',
+                'end',
+                text=cnl,
+                values=(code,)#
+            )
+        self.wdgts['tv'].counter.set(len(self.wdgts['tv'].tv.get_children()))
+        self.wdgts['tv'].btn_2.configure(state='normal')
+        self.res['raw_concls'] = concls
+    
+    def prepare_concls(self):
+        if not self.data['fp']['path_to_raw_cnls']:
+            print('Set path to concls!')
+            return None
+        raw_cnl = {'НДС': '', 'НП': '', 'НДФЛ_СВ': '', 'Ч1_НК': ''}
+        for cnl, code in self.res['raw_concls']:
+            raw_cnl[code] += (cnl+'\n')
+        stored_cnl = {key: None for key in raw_cnl}
+        for key in stored_cnl:
+            stored_cnl[key] = rwtools.read_text(
+                PATHS[key], encoding='utf_8_sig'
+            )
+        prep_cnl = {
+            code: cnp.find_concls(raw_cnl[code][:-1], stored_cnl[code])
+            for code in raw_cnl
+        }
+        self.res['prep_concls'] = prep_cnl
+        self.insert_info('Выводы подготовлены для добора!')
+    
+    def print_date(self, event, mode):
+        if mode == 'year':
+            self.wdgts['db'].store_year(None)
+        elif mode == 'month':
+            self.wdgts['db'].store_month(None)
+        elif mode == 'day':
+            self.wdgts['db'].store_day(None)
+        if self.data['db']['month'] and self.data['db']['day']:
+            date = '{:0>2d}.{:0>2d}.{:4d}'.format(
+                    self.data['db']['day'],
+                    self.data['db']['month'],
+                    self.data['db']['year']
+            )
+            self.insert_info(
+                'Искать акты, загруженные в КонсультантПлюс позже {}'.format(
+                    date
+                )
+            )
+
+    def insert_info(self, text):
+        self.wdgts['it'].text.configure(state='normal')
+        text = '\t'+str(text)+'\n'+'='*69+'\n'
+        self.wdgts['it'].text.insert('end', text)
+        self.wdgts['it'].text.configure(state='disabled')
+    
+    def special_tv_insert(self, x):
+        data = self.wdgts['tv'].tv.item(
+            self.wdgts['tv'].tv.identify('item', x.x, x.y)
+        )
+        text = data['values'][0]+'\n\t'+data['text']
+        self.insert_info(text)
+
+    #def start_widget(self):
+    #    self.root.mainloop()
