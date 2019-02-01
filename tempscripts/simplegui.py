@@ -465,22 +465,30 @@ class UpperRightButtons(ttk.Frame):
         self.btn_1.grid(column=0, row=0, sticky='e')
 
     def start_widget(self):
-        self.grid()
-        self.mainloop()
+        pass
 
-class lowerLeftBottons(ttk.Frame):
+class LowerLeftBottons(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
+        self.data = {}
+        self.btn_1 = None
     
+    def cmd_1(self):
+        print('Command not specified!')
+
     def build_widgets(self):
-        pass
+        self.btn_1 = ttk.Button(
+            self,
+            text='Подготовить акты',
+            state='disabled',
+            command=self.cmd_1
+        )
     
     def grid_inner_widgets(self):
-        pass
+        self.btn_1.grid(column=0, row=0, sticky='nw')
 
     def start_widget(self):
-        self.grid()
-        self.mainloop()
+        pass
 
 
 class MainLogic():
@@ -497,7 +505,8 @@ class MainLogic():
             'fp': FilePaths(root),
             'db': DateBox(root),
             'it': InfoText(root),
-            'urb': UpperRightButtons(root)
+            #'urb': UpperRightButtons(root),
+            'llb': LowerLeftBottons(root)
         }
         for key in self.wdgts:
             self.data[key] = self.wdgts[key].data
@@ -505,17 +514,15 @@ class MainLogic():
             self.wdgts[key].grid_inner_widgets()
         self.reconfigure()
         self.wdgts['fp'].grid(column=0, row=0, columnspan=2, sticky='we')
-        self.wdgts['fp'].columnconfigure(1, weight=1)
-        self.wdgts['urb'].grid(column=2, row=0, sticky='ne')
-        self.wdgts['db'].grid(column=0, row=2, sticky='we')
+        #self.wdgts['urb'].grid(column=2, row=0, sticky='ne')
         self.wdgts['tv'].grid(column=0, row=1, sticky='n')
-        self.wdgts['it'].grid(
-            column=1, row=1, columnspan=2, rowspan=3, sticky='nwse'
-        )
+        self.wdgts['db'].grid(column=0, row=2, sticky='wne')
+        self.wdgts['llb'].grid(column=0, row=3, sticky='wn')
+        self.wdgts['it'].grid(column=1, row=1, rowspan=4, sticky='nwse')
         self.wdgts['it'].columnconfigure(0, weight=1)
         self.wdgts['it'].rowconfigure(0, weight=1)
         root.columnconfigure(1, weight=1)
-        root.rowconfigure(2, weight=1)
+        root.rowconfigure(3, weight=1)
         root.update()
         root.minsize(root.winfo_width(), root.winfo_height())
         self.root.mainloop()
@@ -539,6 +546,7 @@ class MainLogic():
             '<<ComboboxSelected>>',
             lambda x: self.print_date(x, 'day')
         )
+        self.wdgts['llb'].btn_1.configure(command=self.prepare_acts)
 
     def upload_concls(self):
         self.wdgts['tv'].tv.delete(*self.wdgts['tv'].tv.get_children())
@@ -597,6 +605,12 @@ class MainLogic():
                     date
                 )
             )
+            if self.data['fp']['texts_folder_path']:
+                self.wdgts['llb'].btn_1.configure(state='normal')
+    
+    def prepare_acts(self):
+        pass
+
 
     def insert_info(self, text):
         self.wdgts['it'].text.configure(state='normal')
