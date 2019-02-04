@@ -69,6 +69,42 @@ def map_docs_to_concls(pkl, lem_map, query_concls, stpw, folder_path, clss):
 
     tpt.write_it(query_concls, RC)
 
+def map_docs_to_concls_2(pkl,
+                         lem_map,
+                         query_concls,
+                         stpw,
+                         folder_path_1,
+                         folder_path_2,
+                         clss,
+                         func=print):
+    Indexer = tpt.Indexer()
+    RC = tpt.ResultsCompiler()
+    #1
+    func('Обрабатываю модель № 01')
+    Indexer.init_model(pkl, stpw, lem_mapping=None, mode='fal_ru_hyphen', ngram_range=(1,1))
+    tpt.find_acts(query_concls, Indexer, RC)
+    Indexer.reset_state()
+    #2
+    func('Обрабатываю модель № 02')
+    Indexer.init_model(pkl, stpw, lem_mapping=lem_map, mode='fal_ru_hyphen', ngram_range=(1,1))
+    tpt.find_acts(query_concls, Indexer, RC)
+    Indexer.reset_state()
+    #3
+    func('Обрабатываю модель № 03')
+    Indexer.init_model(pkl, stpw, lem_mapping=None, mode='fal_ru_hyphen', ngram_range=(2,2))
+    tpt.find_acts(query_concls, Indexer, RC)
+    Indexer.reset_state()
+    #4
+    func('Обрабатываю модель № 04')
+    Indexer.init_model(pkl, stpw, lem_mapping=lem_map, mode='fal_ru_hyphen', ngram_range=(2,2))
+    tpt.find_acts(query_concls, Indexer, RC)
+    Indexer.reset_state()
+    
+    func('Записал результаты в\n{}'.format(folder_path_2))
+    rwtools.save_object(RC, '{}_{}_RC_full'.format(date.today(), clss), folder_path_1)
+
+    tpt.write_it_2(query_concls, RC, folder_path_2)
+
 def text_to_dct(text):
     dct = {
         '4':[],

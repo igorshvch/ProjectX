@@ -178,6 +178,17 @@ def find_concls(raw_query_concls, raw_stored_concls):
     writer(dct.items(), 'found_concls', mode='w')
     return result
 
+def find_concls_2(raw_query_concls, raw_stored_concls):
+    list_of_input_concls = clean_input_concls(raw_query_concls)
+    list_of_processed_concls = (
+        dct_to_list_of_concls(clean_output_concls(raw_stored_concls))
+    )
+    result, _, _ = find_input_concl_in_stored_ones(
+        list_of_input_concls,
+        list_of_processed_concls
+    )
+    return result
+
 
 
 '''

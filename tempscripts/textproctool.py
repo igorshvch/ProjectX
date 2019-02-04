@@ -474,6 +474,26 @@ def write_it(cnls, RC):
             holder.append(st)
         writer(holder, 'cnl_{:0>3d}'.format(ind), mode='w', verbose=False)
 
+def write_it_2(cnls, RC, folder):
+    for ind, cnl in enumerate(cnls, start=1):
+        cnl = cnl.strip()
+        holder = [cnl]
+        holder.append('='*127)
+        for res in RC.retrive_results(cnl)[:5]:
+            if isinstance(res, str):
+                print('IND #', ind, res)
+                holder.append('Подходящих актов не найдено!')
+                with open(folder.joinpath('вывод_{:0>3d}'.format(ind)), mode='w') as f:
+                    for i in holder:
+                        f.write(i)
+                break
+            st = '{:-<95s} || Ранг: {: >7.5f}'
+            st = st.format(res[0], res[1])
+            holder.append(st)
+        with open(folder.joinpath('вывод_{:0>3d}.txt'.format(ind)), mode='w') as f:
+            for i in holder:
+                f.write(i+'\n')
+
         
         
         

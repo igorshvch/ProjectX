@@ -11,13 +11,17 @@ from tkinter import ttk
 from tkinter import filedialog as fd
 import calendar
 from datetime import date
+from pathlib import Path
 import random
+import _thread as thread
 #leap yeasr formula:
 #366 if ((year%4 == 0 and year%100 != 0) or (year%400 == 0)) else 365
 
 #from guidialogs import ffp, fdp
 from tempscripts import tempmain as tpm
 from textproc import rwtools, conclprep as cnp
+
+lock = thread.allocate_lock()
 
 PATHS = {
     'НДС': r'C:\Users\EA-ShevchenkoIS\ProjectX\CommonData\PPN\PPN_4.txt',
@@ -28,6 +32,13 @@ PATHS = {
         r'C:\Users\EA-ShevchenkoIS\ProjectX\CommonData\custom_stpw_wo_objections'
     ),
     'patterns': r'C:\Users\EA-ShevchenkoIS\ProjectX\patterns.txt'
+}
+
+DIR_STRUCT = {
+    'НДС': ['НДС', 'НДС/Результат'],
+    'НП': ['НП', 'НП/Результат'],
+    'НДФЛ_СВ': ['НДФЛ_СВ', 'НДФЛ_СВ/Результат'],
+    'Ч1_НК': ['Ч1_НК', 'Ч1_НК/Результат']
 }
 
 class AutoScrollbar(ttk.Scrollbar):
@@ -484,11 +495,20 @@ class LowerLeftBottons(ttk.Frame):
             self,
             text='Подготовить акты',
             state='disabled',
-            command=self.cmd_1
+            command=self.cmd_1,
+            width=17
+        )
+        self.btn_2 = ttk.Button(
+            self,
+            text='Сделать добор',
+            state='disabled',
+            command=self.cmd_1,
+            width=17
         )
     
     def grid_inner_widgets(self):
         self.btn_1.grid(column=0, row=0, sticky='nw')
+        self.btn_2.grid(column=0, row=1, sticky='nw')
 
     def start_widget(self):
         pass
@@ -552,7 +572,12 @@ class MainLogic():
             '<<ComboboxSelected>>',
             lambda x: self.print_date(x, 'day')
         )
-        self.wdgts['llb'].btn_1.configure(command=self.prepare_acts)
+        self.wdgts['llb'].btn_1.configure(
+            command=lambda: thread.start_new_thread(self.prepare_acts, ())
+        )
+        self.wdgts['llb'].btn_2.configure(
+            command=lambda: thread.start_new_thread(self.find_similar, ())
+        )
 
     def upload_concls(self):
         self.wdgts['tv'].tv.delete(*self.wdgts['tv'].tv.get_children())
@@ -587,7 +612,7 @@ class MainLogic():
                 PATHS[key], encoding='utf_8_sig'
             )
         prep_cnl = {
-            code: cnp.find_concls(raw_cnl[code][:-1], stored_cnl[code])
+            code: cnp.find_concls_2(raw_cnl[code][:-1], stored_cnl[code])
             for code in raw_cnl
         }
         self.res['prep_concls'] = prep_cnl
@@ -601,10 +626,15 @@ class MainLogic():
         elif mode == 'day':
             self.wdgts['db'].store_day(None)
         if self.data['db']['month'] and self.data['db']['day']:
-            date = '{:0>2d}.{:0>2d}.{:4d}'.format(
-                    self.data['db']['day'],
-                    self.data['db']['month'],
-                    self.data['db']['year']
+            year, month, day = (
+                self.data['db']['year'],
+                self.data['db']['month'],
+                self.data['db']['day']
+            )
+            date = '{:0>2d}.{:0>2d}.{:4d}'.format(day, month, year)
+            self.res['date'] = [year, month, day]
+            self.res['date_text'] = '{:4d}-{:0>2d}-{:0>2d}'.format(
+                year, month, day
             )
             self.insert_info(
                 'Искать акты, загруженные в КонсультантПлюс позже {}'.format(
@@ -613,7 +643,24 @@ class MainLogic():
             )
             if self.data['fp']['texts_folder_path']:
                 self.wdgts['llb'].btn_1.configure(state='normal')
+            if self.data['fp']['res_folder_path']:
+                self.create_sub_dirs()
     
+    def create_sub_dirs(self):
+        info_text = 'Сформированы папки для сохранения:'
+        root = Path(self.data['fp']['res_folder_path']).joinpath(
+            'После_'+self.res['date_text']
+        )
+        self.res['save_dirs'] = {}
+        for key in DIR_STRUCT:
+            self.res['save_dirs'][key] = []
+            for item in DIR_STRUCT[key]:
+                dir_path = root.joinpath(item)
+                self.res['save_dirs'][key].append(dir_path)
+                dir_path.mkdir(parents=True, exist_ok=True)
+                info_text += '\n{}'.format(dir_path)
+        self.insert_info(info_text)
+
     def def_path_to_docs(self):
         self.wdgts['fp'].cmd_1()
         #self.wdgts['llb'].btn_1.configure(state='normal')
@@ -624,11 +671,107 @@ class MainLogic():
     
     def def_path_to_save(self):
         self.wdgts['fp'].cmd_3()
-        #####################
+        if self.res.get('date') and self.data['fp']['res_folder_path']:
+            self.create_sub_dirs()
+        ########################
 
     def prepare_acts(self):
-        pass
-
+        for wdgt in (
+            self.wdgts['fp'].btn_1,
+            self.wdgts['fp'].btn_2,
+            self.wdgts['fp'].btn_3,
+            self.wdgts['tv'].btn_1,
+            self.wdgts['tv'].btn_2,
+            self.wdgts['db'].cmb_1,
+            self.wdgts['db'].cmb_2,
+            self.wdgts['db'].cmb_3,
+            self.wdgts['llb'].btn_1
+        ):
+            wdgt.configure(state='disabled')
+        self.res['doc_gen'] = {}
+        self.res['pkl'] = {}
+        self.res['lem_map'] = {}
+        year, month, day = self.res['date']
+        with lock:
+            self.insert_info('Читаю акты!')
+        for code in self.res['save_dirs']:
+            self.res['doc_gen'][code] = tpm.create_doc_gen(
+                self.data['fp']['texts_folder_path'],
+                PATHS['patterns'],
+                code,
+                year, month, day
+            )
+        with lock:
+            self.insert_info('Обрабатываю текст, формирую словари!')
+        for code in self.res['doc_gen']:
+            self.res['pkl'][code] = tpm.create_pkl(
+                self.res['save_dirs'][code][0].joinpath('pkl'),
+                self.res['doc_gen'][code]
+            )
+            self.res['lem_map'][code] = tpm.create_and_save_lem_map(
+                self.res['save_dirs'][code][0],
+                self.res['pkl'][code],
+                code
+            )
+        for wdgt in (
+            self.wdgts['fp'].btn_1,
+            self.wdgts['fp'].btn_2,
+            self.wdgts['fp'].btn_3,
+            self.wdgts['tv'].btn_1,
+            self.wdgts['tv'].btn_2,
+            self.wdgts['db'].cmb_1,
+            self.wdgts['db'].cmb_2,
+            self.wdgts['db'].cmb_3,
+            #self.wdgts['llb'].btn_1
+        ):
+            wdgt.configure(state='normal')
+        with lock:
+            self.insert_info('Судебные акты подготовлены для добора')
+        self.wdgts['llb'].btn_2.configure(state='normal')
+    
+    def find_similar(self):
+        for wdgt in (
+            self.wdgts['fp'].btn_1,
+            self.wdgts['fp'].btn_2,
+            self.wdgts['fp'].btn_3,
+            self.wdgts['tv'].btn_1,
+            self.wdgts['tv'].btn_2,
+            self.wdgts['db'].cmb_1,
+            self.wdgts['db'].cmb_2,
+            self.wdgts['db'].cmb_3,
+            #self.wdgts['llb'].btn_1,
+            self.wdgts['llb'].btn_2
+        ):
+            wdgt.configure(state='disabled')
+        stpw = rwtools.load_pickle(PATHS['stpw'])
+        for code in self.res['prep_concls']:
+            with lock:
+                self.insert_info('Обрабатываю выводы из ЭСС {}'.format(code))
+            tpm.map_docs_to_concls_2(
+                self.res['pkl'][code],
+                self.res['lem_map'][code],
+                self.res['prep_concls'][code],
+                stpw,
+                self.res['save_dirs'][code][0],
+                self.res['save_dirs'][code][1],
+                code,
+                func=self.insert_info
+            )
+        for wdgt in (
+            self.wdgts['fp'].btn_1,
+            self.wdgts['fp'].btn_2,
+            self.wdgts['fp'].btn_3,
+            self.wdgts['tv'].btn_1,
+            self.wdgts['tv'].btn_2,
+            self.wdgts['db'].cmb_1,
+            self.wdgts['db'].cmb_2,
+            self.wdgts['db'].cmb_3,
+            #self.wdgts['llb'].btn_1,
+            #self.wdgts['llb'].btn_2
+        ):
+            wdgt.configure(state='normal')
+        with lock:
+            self.insert_info('Добор завершен!')   
 
     def insert_info(self, text):
         self.wdgts['it'].text.configure(state='normal')
@@ -640,7 +783,9 @@ class MainLogic():
         data = self.wdgts['tv'].tv.item(
             self.wdgts['tv'].tv.identify('item', x.x, x.y)
         )
-        text = data['values'][0]+'\n\t'+data['text']
+        val1 = data['values'][0] if data['values'] else 'Заголовок'
+        val2 = data['text'] if data['text'] else 'Текст заголовка'
+        text = val1+'\n\t'+val2
         self.insert_info(text)
 
     #def start_widget(self):
