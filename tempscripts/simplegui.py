@@ -108,7 +108,8 @@ class TreeviewBuilder(ttk.Frame):
         self.btn_1 = ttk.Button(
             self,
             text='Загрузить кирпичи',
-            command= lambda: print('Command not specified!')
+            command= lambda: print('Command not specified!'),
+            state='disabled'
         )
         self.btn_2 = ttk.Button(
             self,
@@ -445,6 +446,7 @@ class InfoText(ttk.Frame):
         self.grid_inner_widgets()
         self.mainloop()
 
+
 class UpperRightButtons(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
@@ -466,6 +468,7 @@ class UpperRightButtons(ttk.Frame):
 
     def start_widget(self):
         pass
+
 
 class LowerLeftBottons(ttk.Frame):
     def __init__(self, parent=None, **kwargs):
@@ -528,6 +531,9 @@ class MainLogic():
         self.root.mainloop()
     
     def reconfigure(self):
+        self.wdgts['fp'].btn_1.configure(command=self.def_path_to_docs)
+        self.wdgts['fp'].btn_2.configure(command=self.def_path_to_concls)
+        self.wdgts['fp'].btn_3.configure(command=self.def_path_to_save)
         self.wdgts['tv'].btn_1.configure(command=self.upload_concls)
         self.wdgts['tv'].btn_2.configure(command=self.prepare_concls)
         self.wdgts['tv'].tv.bind(
@@ -608,6 +614,18 @@ class MainLogic():
             if self.data['fp']['texts_folder_path']:
                 self.wdgts['llb'].btn_1.configure(state='normal')
     
+    def def_path_to_docs(self):
+        self.wdgts['fp'].cmd_1()
+        #self.wdgts['llb'].btn_1.configure(state='normal')
+    
+    def def_path_to_concls(self):
+        self.wdgts['fp'].cmd_2()
+        self.wdgts['tv'].btn_1.configure(state='normal')
+    
+    def def_path_to_save(self):
+        self.wdgts['fp'].cmd_3()
+        #####################
+
     def prepare_acts(self):
         pass
 
