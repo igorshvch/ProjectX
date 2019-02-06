@@ -24,12 +24,12 @@ from smg_test_ig.textproc import rwtools, conclprep as cnp
 lock = thread.allocate_lock()
 
 PATHS = {
-    'НДС': lambda: Path(__file__).parent.joinpath('PPN_4.txt'),
-    'НП': lambda: Path(__file__).parent.joinpath('PPN_9.txt'),
-    'НДФЛ_СВ': lambda: Path(__file__).parent.joinpath('PPN_31.txt'),
-    'Ч1_НК': lambda: Path(__file__).parent.joinpath('PPN_34.txt'),
-    'stpw': lambda: Path(__file__).parent.joinpath('custom_stpw_wo_objections.pckl'),
-    'patterns': lambda: Path(__file__).parent.joinpath('patterns.txt')
+    'НДС': lambda: Path(__file__).parent.joinpath('data/PPN_4.txt'),
+    'НП': lambda: Path(__file__).parent.joinpath('data/PPN_9.txt'),
+    'НДФЛ_СВ': lambda: Path(__file__).parent.joinpath('data/PPN_31.txt'),
+    'Ч1_НК': lambda: Path(__file__).parent.joinpath('data/PPN_34.txt'),
+    'stpw': lambda: Path(__file__).parent.joinpath('data/custom_stpw_wo_objections.pckl'),
+    'patterns': lambda: Path(__file__).parent.joinpath('data/patterns.txt')
 }
 
 DIR_STRUCT = {
@@ -116,16 +116,16 @@ class TreeviewBuilder(ttk.Frame):
 
         self.btn_1 = ttk.Button(
             self,
-            text='Загрузить кирпичи',
+            text='Подготовить выводы', #'Загрузить кирпичи',
             command= lambda: print('Command not specified!'),
             state='disabled'
         )
-        self.btn_2 = ttk.Button(
-            self,
-            text='Подготовить выводы',
-            command= lambda: print('Command not specified!'),
-            state='disabled'
-        )
+        #self.btn_2 = ttk.Button(
+        #    self,
+        #    text='Подготовить выводы',
+        #    command= lambda: print('Command not specified!'),
+        #    state='disabled'
+        #)
 
         self.label_inf = ttk.Label(
             self,
@@ -164,7 +164,7 @@ class TreeviewBuilder(ttk.Frame):
     def grid_inner_widgets(self):
         self.tv.grid(column=0, row=0, columnspan=2, sticky='we')
         self.btn_1.grid(column=0, row=1, sticky='we')
-        self.btn_2.grid(column=0, row=2, columnspan=2, sticky='we')
+        #self.btn_2.grid(column=0, row=2, columnspan=2, sticky='we')
         self.label_inf.grid(column=1, row=1, sticky='we')
         self.scroll.grid(column=2, row=0, sticky='nes')
     
@@ -468,12 +468,14 @@ class UpperRightButtons(ttk.Frame):
     def build_widgets(self):
         self.btn_1 = ttk.Button(
             self,
-            text='Подготовить акты',
-            command=self.cmd_1
+            text='Подготовить\nновый\nдобор',
+            state='disabled',
+            command=self.cmd_1,
+            #width=12
         )
     
     def grid_inner_widgets(self):
-        self.btn_1.grid(column=0, row=0, sticky='e')
+        self.btn_1.grid(column=0, row=0, sticky='nws')
 
     def start_widget(self):
         pass
@@ -503,18 +505,18 @@ class LowerLeftBottons(ttk.Frame):
             command=self.cmd_1,
             width=17
         )
-        self.btn_3 = ttk.Button(
-            self,
-            text='Рабочая папка',
-            state='normal',
-            command=self.cmd_1,
-            width=17
-        )
+        #self.btn_3 = ttk.Button(
+        #    self,
+        #    text='Рабочая папка',
+        #    state='normal',
+        #    command=self.cmd_1,
+        #    width=17
+        #)
     
     def grid_inner_widgets(self):
         self.btn_1.grid(column=0, row=0, sticky='nw')
         self.btn_2.grid(column=0, row=1, sticky='nw')
-        self.btn_3.grid(column=0, row=2, sticky='nw')
+        #self.btn_3.grid(column=0, row=2, sticky='nw')
 
     def start_widget(self):
         pass
@@ -522,19 +524,18 @@ class LowerLeftBottons(ttk.Frame):
 
 class MainLogic():
     def __init__(self):
-        self.root = tk.Tk()
         self.data = {}
-        self.files = {}
         self.res = {}
     
     def build_widgets(self):
+        self.root = tk.Tk()
         root = self.root
         self.wdgts = {
             'tv': TreeviewBuilder(root),
             'fp': FilePaths(root),
             'db': DateBox(root),
             'it': InfoText(root),
-            #'urb': UpperRightButtons(root),
+            'urb': UpperRightButtons(root),
             'llb': LowerLeftBottons(root)
         }
         for key in self.wdgts:
@@ -543,14 +544,17 @@ class MainLogic():
             self.wdgts[key].grid_inner_widgets()
         self.reconfigure()
         self.wdgts['fp'].grid(column=0, row=0, columnspan=2, sticky='we')
-        #self.wdgts['urb'].grid(column=2, row=0, sticky='ne')
+        self.wdgts['urb'].grid(column=2, row=0, sticky='nws')
         self.wdgts['tv'].grid(column=0, row=1, sticky='n')
         self.wdgts['db'].grid(column=0, row=2, sticky='wne')
         self.wdgts['llb'].grid(column=0, row=3, sticky='wn')
-        self.wdgts['it'].grid(column=1, row=1, rowspan=4, sticky='nwse')
+        self.wdgts['it'].grid(
+            column=1, row=1, rowspan=4, columnspan=2, sticky='nwse'
+        )
         self.wdgts['it'].columnconfigure(0, weight=1)
         self.wdgts['it'].rowconfigure(0, weight=1)
-        root.columnconfigure(1, weight=1)
+        self.wdgts['urb'].rowconfigure(0, weight=1)
+        root.columnconfigure(2, weight=1)
         root.rowconfigure(3, weight=1)
         root.update()
         root.minsize(root.winfo_width(), root.winfo_height())
@@ -561,7 +565,7 @@ class MainLogic():
         self.wdgts['fp'].btn_2.configure(command=self.def_path_to_concls)
         self.wdgts['fp'].btn_3.configure(command=self.def_path_to_save)
         self.wdgts['tv'].btn_1.configure(command=self.upload_concls)
-        self.wdgts['tv'].btn_2.configure(command=self.prepare_concls)
+        #self.wdgts['tv'].btn_2.configure(command=self.prepare_concls)
         self.wdgts['tv'].tv.bind(
             '<Double-1>',
             lambda x: self.special_tv_insert(x)
@@ -584,9 +588,12 @@ class MainLogic():
         self.wdgts['llb'].btn_2.configure(
             command=lambda: thread.start_new_thread(self.find_similar, ())
         )
-        self.wdgts['llb'].btn_3.configure(
-            command=lambda: self.insert_info(str(PATHS['patterns']()))
+        self.wdgts['urb'].btn_1.configure(
+            command=self.reset_widgets
         )
+        #self.wdgts['llb'].btn_3.configure(
+        #    command=lambda: self.insert_info(str(PATHS['patterns']()))
+        #)
 
     def upload_concls(self):
         self.wdgts['tv'].tv.delete(*self.wdgts['tv'].tv.get_children())
@@ -605,8 +612,9 @@ class MainLogic():
                 values=(code,)#
             )
         self.wdgts['tv'].counter.set(len(self.wdgts['tv'].tv.get_children()))
-        self.wdgts['tv'].btn_2.configure(state='normal')
+        #self.wdgts['tv'].btn_2.configure(state='normal')
         self.res['raw_concls'] = concls
+        self.prepare_concls()
     
     def prepare_concls(self):
         if not self.data['fp']['path_to_raw_cnls']:
@@ -625,6 +633,7 @@ class MainLogic():
             for code in raw_cnl
         }
         self.res['prep_concls'] = prep_cnl
+        self.wdgts['tv'].btn_1.configure(state='disabled')
         self.insert_info('Выводы подготовлены для добора!')
     
     def print_date(self, event, mode):
@@ -652,8 +661,6 @@ class MainLogic():
             )
             if self.data['fp']['texts_folder_path']:
                 self.wdgts['llb'].btn_1.configure(state='normal')
-            if self.data['fp']['res_folder_path']:
-                self.create_sub_dirs()
     
     def create_sub_dirs(self):
         info_text = 'Сформированы папки для сохранения:'
@@ -685,12 +692,17 @@ class MainLogic():
         ########################
 
     def prepare_acts(self):
+        if self.data['fp']['res_folder_path']:
+                self.create_sub_dirs()
+        else:
+            mes = 'ВНИМАНИЕ! Укажите папку для сохранения результатов!'
+            return self.insert_info(mes)
         for wdgt in (
             self.wdgts['fp'].btn_1,
             self.wdgts['fp'].btn_2,
             self.wdgts['fp'].btn_3,
             self.wdgts['tv'].btn_1,
-            self.wdgts['tv'].btn_2,
+            #self.wdgts['tv'].btn_2,
             self.wdgts['db'].cmb_1,
             self.wdgts['db'].cmb_2,
             self.wdgts['db'].cmb_3,
@@ -702,7 +714,7 @@ class MainLogic():
         self.res['lem_map'] = {}
         year, month, day = self.res['date']
         with lock:
-            self.insert_info('Читаю акты!')
+            self.insert_info('Индексирую акты!')
         for code in self.res['save_dirs']:
             self.res['doc_gen'][code] = tpm.create_doc_gen(
                 self.data['fp']['texts_folder_path'],
@@ -726,8 +738,8 @@ class MainLogic():
             self.wdgts['fp'].btn_1,
             self.wdgts['fp'].btn_2,
             self.wdgts['fp'].btn_3,
-            self.wdgts['tv'].btn_1,
-            self.wdgts['tv'].btn_2,
+            #self.wdgts['tv'].btn_1,
+            #self.wdgts['tv'].btn_2,
             self.wdgts['db'].cmb_1,
             self.wdgts['db'].cmb_2,
             self.wdgts['db'].cmb_3,
@@ -744,7 +756,7 @@ class MainLogic():
             self.wdgts['fp'].btn_2,
             self.wdgts['fp'].btn_3,
             self.wdgts['tv'].btn_1,
-            self.wdgts['tv'].btn_2,
+            #self.wdgts['tv'].btn_2,
             self.wdgts['db'].cmb_1,
             self.wdgts['db'].cmb_2,
             self.wdgts['db'].cmb_3,
@@ -766,21 +778,43 @@ class MainLogic():
                 code,
                 func=self.insert_info
             )
+        self.wdgts['urb'].btn_1.configure(state='normal')
+        with lock:
+            self.insert_info('Добор завершен!')
+
+    def reset_widgets(self):
+        self.res = {}
+        self.wdgts['tv'].tv.delete(*self.wdgts['tv'].tv.get_children())
+        for wdgt in (
+            self.wdgts['db'].cmb_1,
+            self.wdgts['db'].cmb_2,
+            self.wdgts['db'].cmb_3,
+            self.wdgts['it'].text
+        ):
+            wdgt.configure(state='normal')
+            wdgt.current(0)
+        self.wdgts['it'].text.delete('1.0', 'end')
+        self.wdgts['it'].text.configure(state='disabled')
+        for var in (
+            self.wdgts['fp'].l_1_var,
+            self.wdgts['fp'].l_2_var,
+            self.wdgts['fp'].l_3_var,
+            self.wdgts['db'].year_var,
+            self.wdgts['db'].month_var,
+            self.wdgts['db'].day_var
+        ):
+            var.set('')
         for wdgt in (
             self.wdgts['fp'].btn_1,
             self.wdgts['fp'].btn_2,
             self.wdgts['fp'].btn_3,
-            self.wdgts['tv'].btn_1,
-            self.wdgts['tv'].btn_2,
-            self.wdgts['db'].cmb_1,
-            self.wdgts['db'].cmb_2,
-            self.wdgts['db'].cmb_3,
+            #self.wdgts['tv'].btn_1,
             #self.wdgts['llb'].btn_1,
             #self.wdgts['llb'].btn_2
         ):
             wdgt.configure(state='normal')
-        with lock:
-            self.insert_info('Добор завершен!')   
+        self.wdgts['urb'].btn_1.configure(state='disabled')
+        self.insert_info('Система готова к новому добору!')
 
     def insert_info(self, text):
         self.wdgts['it'].text.configure(state='normal')
