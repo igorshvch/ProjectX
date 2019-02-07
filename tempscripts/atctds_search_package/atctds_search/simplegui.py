@@ -18,8 +18,8 @@ import _thread as thread
 #366 if ((year%4 == 0 and year%100 != 0) or (year%400 == 0)) else 365
 
 #from guidialogs import ffp, fdp
-from smg_test_ig import tempmain as tpm
-from smg_test_ig.textproc import rwtools, conclprep as cnp
+from atctds_search import tempmain as tpm
+from atctds_search.textproc import rwtools, conclprep as cnp
 
 lock = thread.allocate_lock()
 
@@ -29,7 +29,9 @@ PATHS = {
     'НДФЛ_СВ': lambda: Path(__file__).parent.joinpath('data/PPN_31.txt'),
     'Ч1_НК': lambda: Path(__file__).parent.joinpath('data/PPN_34.txt'),
     'stpw': lambda: Path(__file__).parent.joinpath('data/custom_stpw_wo_objections.pckl'),
-    'patterns': lambda: Path(__file__).parent.joinpath('data/patterns.txt')
+    'patterns': lambda: Path(__file__).parent.joinpath('data/patterns.txt'),
+    'ad_info': lambda: Path(__file__).parent.joinpath('data/about.txt'),
+    'icon': lambda: Path(__file__).parent.joinpath('data/pad_icon2.ico')
 }
 
 DIR_STRUCT = {
@@ -154,7 +156,7 @@ class TreeviewBuilder(ttk.Frame):
             '<Double-1>',
             lambda x: print(self.tv.item(self.tv.identify('item', x.x, x.y)))
         )
-        self.scroll = AutoScrollbar(
+        self.scroll = ttk.Scrollbar(
                     self,
                     orient='vertical',
                     command=self.tv.yview
@@ -283,7 +285,6 @@ class DateBox(ttk.Frame):
             'month': None,
             'day': None
         }
-        self.years = list(range(2017, 2020, 1))
         self.months_to_ints = {
             'Январь': 1, 'Февраль': 2, 'Март': 3, 'Апрель': 4,
             'Май': 5, 'Июнь': 6, 'Июль': 7, 'Август': 8,
@@ -299,7 +300,9 @@ class DateBox(ttk.Frame):
         self.label_h = None
         self.year_var = tk.StringVar()
         self.month_var = tk.StringVar()
+        self.month_code_var = tk.StringVar()
         self.day_var = tk.StringVar()
+        self.day_code_var = tk.StringVar()
     
     def store_year(self, event):
         year = int(self.year_var.get())
@@ -315,15 +318,16 @@ class DateBox(ttk.Frame):
             )
     
     def store_month(self, event):
-        month_code = self.cmb_2.current()+1
+        month = self.month_var.get()
+        month_code = self.months_to_ints[month]
         self.data['month'] = month_code
-        self.month_var.set('{:0>2d}.'.format(month_code))
+        self.month_code_var.set('{:0>2d}.'.format(month_code))
         days_in_month = calendar.monthrange(
             self.data['year'],
             self.data['month']
         )[1]
         self.cmb_3.configure(
-            values=list(range(1, days_in_month+1, 1)),
+            values=[str(i) for i in range(1, days_in_month+1, 1)],
             state='normal'
         )
         if self.data['day']:
@@ -336,9 +340,9 @@ class DateBox(ttk.Frame):
             )
 
     def store_day(self, event):
-        day_code = self.cmb_3.current()+1
-        self.data['day'] = day_code
-        self.day_var.set('{:0>2d}.'.format(day_code))
+        day = int(self.day_var.get())
+        self.data['day'] = day
+        self.day_code_var.set('{:0>2d}.'.format(day))
         print(
             '{:4d}-{:0>2d}-{:0>2d}'.format(
                 self.data['year'],
@@ -359,6 +363,7 @@ class DateBox(ttk.Frame):
         self.cmb_2 = ttk.Combobox(
             self,
             values=self.months,
+            textvariable=self.month_var,
             width=10,
             state='disabled'
         )
@@ -366,6 +371,7 @@ class DateBox(ttk.Frame):
 
         self.cmb_3 = ttk.Combobox(
             self,
+            textvariable=self.day_var,
             width=10,
             state='disabled'
         )
@@ -381,14 +387,14 @@ class DateBox(ttk.Frame):
         )
         self.label_inf_m = ttk.Label(
             self,
-            textvariable=self.month_var,
+            textvariable=self.month_code_var,
             anchor='center',
             width=3,
             relief='sunken'
         )
         self.label_inf_d = ttk.Label(
             self,
-            textvariable=self.day_var,
+            textvariable=self.day_code_var,
             anchor='e',
             width=3,
             relief='sunken'
@@ -435,7 +441,7 @@ class InfoText(ttk.Frame):
     
     def build_widgets(self):
         self.text = tk.Text(self, state='disabled')
-        self.scroll = AutoScrollbar(
+        self.scroll = ttk.Scrollbar(
             self,
             orient='vertical',
             command=self.text.yview
@@ -468,7 +474,7 @@ class UpperRightButtons(ttk.Frame):
     def build_widgets(self):
         self.btn_1 = ttk.Button(
             self,
-            text='Подготовить\nновый\nдобор',
+            text='Подготовить\n      новый\n      добор',
             state='disabled',
             command=self.cmd_1,
             #width=12
@@ -530,6 +536,11 @@ class MainLogic():
     def build_widgets(self):
         self.root = tk.Tk()
         root = self.root
+        root.title('Автоматический добор судебной практики для ЭСС по налогам')
+        root.iconbitmap(PATHS['icon']())
+        top_menu = tk.Menu(root)
+        root.configure(menu=top_menu)
+        top_menu.add_command(label='О программе', command=self.show_additional_info)
         self.wdgts = {
             'tv': TreeviewBuilder(root),
             'fp': FilePaths(root),
@@ -540,6 +551,7 @@ class MainLogic():
         }
         for key in self.wdgts:
             self.data[key] = self.wdgts[key].data
+            self.wdgts[key].configure(padding=(4,6))
             self.wdgts[key].build_widgets()
             self.wdgts[key].grid_inner_widgets()
         self.reconfigure()
@@ -789,10 +801,10 @@ class MainLogic():
             self.wdgts['db'].cmb_1,
             self.wdgts['db'].cmb_2,
             self.wdgts['db'].cmb_3,
-            self.wdgts['it'].text
         ):
             wdgt.configure(state='normal')
             wdgt.current(0)
+        self.wdgts['it'].text.configure(state='normal')
         self.wdgts['it'].text.delete('1.0', 'end')
         self.wdgts['it'].text.configure(state='disabled')
         for var in (
@@ -801,9 +813,12 @@ class MainLogic():
             self.wdgts['fp'].l_3_var,
             self.wdgts['db'].year_var,
             self.wdgts['db'].month_var,
-            self.wdgts['db'].day_var
+            self.wdgts['db'].month_code_var,
+            self.wdgts['db'].day_var,
+            self.wdgts['db'].day_code_var
         ):
             var.set('')
+        self.wdgts['tv'].counter.set(0)
         for wdgt in (
             self.wdgts['fp'].btn_1,
             self.wdgts['fp'].btn_2,
@@ -820,6 +835,7 @@ class MainLogic():
         self.wdgts['it'].text.configure(state='normal')
         text = '\t'+str(text)+'\n'+'='*69+'\n'
         self.wdgts['it'].text.insert('end', text)
+        self.wdgts['it'].text.see('end')
         self.wdgts['it'].text.configure(state='disabled')
     
     def special_tv_insert(self, x):
@@ -830,6 +846,28 @@ class MainLogic():
         val2 = data['text'] if data['text'] else 'Текст заголовка'
         text = val1+'\n\t'+val2
         self.insert_info(text)
+    
+    def show_additional_info(self):
+        with open(PATHS['ad_info'](), mode='r') as f:
+            mes = f.read()
+        ad_win = tk.Toplevel(self.root)
+        ad_win.title('О программе')
+        text = tk.Text(ad_win, wrap='word')
+        scroll = ttk.Scrollbar(
+            ad_win,
+            orient='vertical',
+            command=text.yview
+        )
+        text.configure(yscrollcommand=scroll.set)
+        text.insert('1.0', mes)
+        text['state'] = 'disabled'
+        text.grid(column=0, row=0, sticky='nwse')
+        scroll.grid(column=1, row=0, sticky='nes')
+        ad_win.columnconfigure(0, weight=1)
+        ad_win.rowconfigure(0, weight=1)
 
     #def start_widget(self):
     #    self.root.mainloop()
+
+if __name__ == '__main__':
+    MainLogic().build_widgets()

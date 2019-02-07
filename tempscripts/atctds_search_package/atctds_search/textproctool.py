@@ -8,9 +8,9 @@ import numpy as np
 import scipy.sparse
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
-from smg_test_ig.debugger import timer
-from smg_test_ig.textproc.normalizer import tokenize, TokLem, PARSER
-from smg_test_ig.textproc import rwtools, textsep
+from atctds_search.debugger import timer
+from atctds_search.textproc.normalizer import tokenize, TokLem, PARSER
+from atctds_search.textproc import rwtools, textsep
 
 class IOPickler():
     def __init__(self, file):

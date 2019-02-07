@@ -4,8 +4,8 @@ import random
 from datetime import date
 from typing import Sequence, List, Dict, Tuple
 
-from smg_test_ig.textproc import rwtools
-from smg_test_ig.debugger import timer
+from atctds_search.textproc import rwtools
+from atctds_search.debugger import timer
 
 
 class MyReaderBase():
