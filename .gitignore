@@ -3,3 +3,4 @@ build/
 dist/
 smg_text_ig.egg-info/
 package_textproc/
+*.bat

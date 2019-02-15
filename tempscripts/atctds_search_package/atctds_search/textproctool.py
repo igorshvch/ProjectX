@@ -483,7 +483,7 @@ def write_it_2(cnls, RC, folder):
             if isinstance(res, str):
                 print('IND #', ind, res)
                 holder.append('Подходящих актов не найдено!')
-                with open(folder.joinpath('вывод_{:0>3d}'.format(ind)), mode='w') as f:
+                with open(folder.joinpath('вывод_{:0>3d}.txt'.format(ind)), mode='w') as f:
                     for i in holder:
                         f.write(i)
                 break

@@ -14,4 +14,5 @@ def create_batch_file():
     with open(filepath, mode='w') as f:
         f.write(create_batch_command())
 
-create_batch_file()
+if __name__ == '__main__':
+        create_batch_file()
