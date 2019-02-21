@@ -3,12 +3,54 @@ import re
 import random
 from datetime import date
 from typing import Sequence, List, Dict, Tuple
+from collections import Counter
 
 from textproc import rwtools
 from debugger import timer
 
 
-class MyReaderBase():
+class MyReaderPre():
+    def __init__(self, file):
+        self.file = file
+        self.file_size = file.seek(0, 2)
+        self.docs_poses = []
+    
+    def __len__(self):
+        if self.docs_poses:
+            print('Number of processed documents')
+            return len(self.docs_poses)
+
+    @timer
+    def find_docs(self,
+                  pattern_doc_end,
+                  codec='cp1251'):
+        #Pattern: r'-{66}'
+        buffer = self.file.buffer
+        buffer.seek(0)
+        last_position = start_pos = 0
+        while True:
+            line = buffer.readline().decode(codec)
+            current_position = buffer.tell()
+            if re.match(pattern_doc_end, line):
+                end_pos = current_position
+                self.docs_poses.append((start_pos, end_pos))
+                start_pos = end_pos
+                continue
+            if last_position == current_position:
+                break
+            else:
+                last_position = current_position
+
+    def find_doc(self, index, codec='cp1251'):
+        buffer = self.file.buffer
+        start, stop = self.docs_poses[index]
+        buffer.seek(start)
+        doc_b = buffer.read(stop-start)
+        text = doc_b.decode(codec)[2:-74]
+        return text
+
+
+class MyReaderEndDate():
     def __init__(self, file):
         self.file = file
         self.file_size = file.seek(0, 2)
@@ -107,9 +149,9 @@ class MyReaderBase():
         docs_quant = len(self.dates_to_poses[d])
         print('{: <11s} : {: >4d} docs'.format(str(d), docs_quant))
 
-class MyReader(MyReaderBase):
+class MyReader(MyReaderEndDate):
     def __init__(self, patterns_file, *args):
-        MyReaderBase.__init__(self, *args)
+        MyReaderEndDate.__init__(self, *args)
         self.patterns = self._unpack_patterns_from_file(patterns_file)
         #store docs positions by date {date: [pos1, pos2]}
         self.dates_to_docs = {}
@@ -388,3 +430,15 @@ def test_word_expand(word, morph=None):
     w = morph.parse(word)[0]
     res = [i[0] for i in w.lexeme]
     return res
+
+
+class Tokenizer():
+    def __init__(self, iterator):
+        self.iterator = iterator
+        self.counter = Counter()
+    
+    def __iter__(self):
+        for doc in self.iterator:
+            doc = doc.lower()
+            doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+            yield doc
