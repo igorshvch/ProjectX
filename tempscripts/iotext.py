@@ -17,10 +17,12 @@ class MyReaderPre():
     
     def __len__(self):
         if self.docs_poses:
-            print('Number of processed documents')
             return len(self.docs_poses)
 
-    @timer
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self.find_doc(i)
+
     def find_docs(self,
                   pattern_doc_end,
                   codec='cp1251'):

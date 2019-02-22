@@ -22,12 +22,11 @@ def timer_with_func_name(func):
     def wrapper(*args, **kwargs):
         local_timer = time()
         print('-'*69)
-        print('===========>DO: {:.>53s}'.format(func.__name__))
+        print('DO >>> {}'.format(func.__name__))
         res = func(*args, **kwargs)
-        print('======>COMLETE: {:.>53s}'.format(func.__name__))
         end_time = time() - local_timer
         print(
-            '=========>TIME: {: >9.4f} min ({: >9.4f} sec)'.format(
+            'EVALUATION TIME: {: >9.4f} min ({: >9.4f} sec)'.format(
                 end_time/60, end_time
             )
         )
