@@ -18,7 +18,7 @@ import _thread as thread
 #366 if ((year%4 == 0 and year%100 != 0) or (year%400 == 0)) else 365
 
 #from guidialogs import ffp, fdp
-from atctds_search import tempmain as tpm
+from atctds_search import tempmain as tpm, iotext as it
 from atctds_search.textproc import rwtools, conclprep as cnp
 
 lock = thread.allocate_lock()
@@ -679,6 +679,7 @@ class MainLogic():
         root = Path(self.data['fp']['res_folder_path']).joinpath(
             'После_'+self.res['date_text']
         )
+        self.res['root_path'] = root
         self.res['save_dirs'] = {}
         for key in DIR_STRUCT:
             self.res['save_dirs'][key] = []
@@ -727,10 +728,45 @@ class MainLogic():
         year, month, day = self.res['date']
         with lock:
             self.insert_info('Индексирую акты!')
+
+        acts_store = it.TextInfoCollector(
+            self.data['fp']['texts_folder_path'],
+            PATHS['patterns']()
+        )
+        acts_store.process_files()
+        dates_all = []
+        for key in acts_store.readers:
+            dates = acts_store.readers[key].dates_to_poses.keys()
+            dates_all.extend(dates)
+        dates_all = sorted(dates_all)
+        date_latest = dates_all[-1]
+        date_user = date(int(year), int(month), int(day))
+        if date_user >= date_latest:
+            with lock:
+                self.insert_info(
+                    'ВНИМАНИЕ! Выбрана более поздняя дата, чем последний полученный акт! Выберите более ранную дату!'
+                )
+            dp = rwtools.collect_exist_dirs(self.res['root_path'])
+            dp.append(self.res['root_path'])
+            dp = sorted(dp, key=lambda x: len(str(x)), reverse=True)
+            for pth in dp:
+                Path(pth).rmdir()
+            for wdgt in (
+                #self.wdgts['fp'].btn_1,
+                #self.wdgts['fp'].btn_2,
+                #self.wdgts['fp'].btn_3,
+                #self.wdgts['tv'].btn_1,
+                #self.wdgts['tv'].btn_2,
+                self.wdgts['db'].cmb_1,
+                self.wdgts['db'].cmb_2,
+                self.wdgts['db'].cmb_3,
+                self.wdgts['llb'].btn_1
+            ):
+                wdgt.configure(state='normal')
+            return 0
+
         for code in self.res['save_dirs']:
-            self.res['doc_gen'][code] = tpm.create_doc_gen(
-                self.data['fp']['texts_folder_path'],
-                PATHS['patterns'](),
+            self.res['doc_gen'][code] = acts_store.find_relevant_docs_by_date(
                 code,
                 year, month, day
             )
@@ -747,9 +783,9 @@ class MainLogic():
                 code
             )
         for wdgt in (
-            self.wdgts['fp'].btn_1,
-            self.wdgts['fp'].btn_2,
-            self.wdgts['fp'].btn_3,
+            #self.wdgts['fp'].btn_1,
+            #self.wdgts['fp'].btn_2,
+            #self.wdgts['fp'].btn_3,
             #self.wdgts['tv'].btn_1,
             #self.wdgts['tv'].btn_2,
             self.wdgts['db'].cmb_1,
