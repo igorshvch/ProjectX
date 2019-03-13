@@ -362,7 +362,7 @@ class Indexer():
         for item in scores:
             ind, score = item
             doc = self.iopickler[ind].split('\n')
-            req = doc[0] + ' ' + doc[3]
+            req = doc[0].strip('\n\r') + ' ' + doc[3].strip('\n\r')
             res_holder.append((req, score, alg_mark, ind))
         return res_holder
     
