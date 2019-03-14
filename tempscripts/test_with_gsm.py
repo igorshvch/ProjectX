@@ -69,13 +69,60 @@ def find_key_words(num_kwords, vector, dct):
     top_tokens = sorted(
         vector, key=lambda x: x[1], reverse=True
     )[:num_kwords]
-    head = '{: >20s}     {: >5s}     {: >8s}'.format('KEY', 'ID', 'SCORE')
+    head = '{: >4s}     {: >20s}     {: >5s}     {: >8s}'.format('ID', 'KEY', 'WID', 'SCORE')
     print(head)
     print('-'*len(head))
-    for token, score in top_tokens:
+    for idn, pair in enumerate(top_tokens, start=1):
+        token, score = pair
         for key, val in dct.token2id.items():
             if val == token:
                 print(
-                    '{: >20s}     {: >5d}     {: >8.6f}'.format(key,val,score)
+                    '{: >4d}     {: >20s}     {: >5d}     {: >8.6f}'.format(idn, key,val,score)
                 )
                 break
+
+##################################
+#From console for refactoring ####
+##################################
+
+def create_inverted_index(corpus_iterator):
+    '''
+    Unefficient function for creating inverted index table
+    '''
+    iid = {}
+    tknz = iot.Tokenizer(corpus_iterator)
+    for ind, tokens_doc in enumerate(tknz):
+        if ind % 10000 == 0:
+            print(ind)
+        tokens_set = set(tokens_doc)
+        for token in tokens_set:
+            iid.setdefault(token, []).append(ind)
+    return iid
+
+def find_req(corpus_iterator, index):
+    '''
+    Return:
+    ФЕДЕРАЛЬНЫЙ АРБИТРАЖНЫЙ СУД ВОЛГО-ВЯТСКОГО ОКРУГА от 3 июля 2013 г. по делу N А43-34943/2011
+    '''
+    act = corpus_iterator.find_doc(index).split('\n')
+    return act[1].strip('\n\r') + ' ' + act[4].strip('\n\r')
+
+def print_sims(corpus_iterator, sims):
+    '''
+    Print:
+    01 >>>    ФЕДЕРАЛЬНЫЙ АРБИТРАЖНЫЙ СУД ВОЛГО-ВЯТСКОГО ОКРУГА от 3 июля 2013 г. по делу N А43-34943/2011 >>> 0.27
+    02 >>>  ФЕДЕРАЛЬНЫЙ АРБИТРАЖНЫЙ СУД ВОЛГО-ВЯТСКОГО ОКРУГА от 6 февраля 2012 г. по делу N А28-6861/2011 >>> 0.26
+    03 >>>      ФЕДЕРАЛЬНЫЙ АРБИТРАЖНЫЙ СУД ВОЛГО-ВЯТСКОГО ОКРУГА арбитражного суда кассационной инстанции >>> 0.22
+    '''
+    for index, item in enumerate(sims, start=1):
+        print('{:0>2d} >>> {: <110s} - {: >5d} - {: >4.2f}'.format(index, find_req(corpus_iterator, item[0]), item[0], item[1]))
+
+def find_relevant_docs(iid, q_words):
+    '''
+    Find docs with query words
+    Return:
+    [intersection_result_1, intersection_result_2, intersection_result3...]
+    '''
+    all_docs = [set(iid[word]) for word in q_words]
+    res = [all_docs[0].intersection(*all_docs[0:i]) for i in range(1, len(all_docs))]
+    return res

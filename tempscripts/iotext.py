@@ -3,10 +3,9 @@ import re
 import random
 from datetime import date
 from typing import Sequence, List, Dict, Tuple
-from collections import Counter
 
-from textproc import rwtools
-from debugger import timer
+from textproc import rwtools, PARSER
+from debugger import timer, timer_message
 
 
 class MyReaderPre():
@@ -22,6 +21,9 @@ class MyReaderPre():
     def __iter__(self):
         for i in range(len(self)):
             yield self.find_doc(i)
+    
+    def __getitem__(self, index):
+        return self.find_doc(index)
 
     def find_docs(self,
                   pattern_doc_end,
@@ -437,10 +439,44 @@ def test_word_expand(word, morph=None):
 class Tokenizer():
     def __init__(self, iterator):
         self.iterator = iterator
-        self.counter = Counter()
     
     def __iter__(self):
         for doc in self.iterator:
             doc = doc.lower()
             doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
             yield doc
+    
+    def __getitem__(self, index):
+        return self.iterator[index]
+
+class TokenizerAdv(Tokenizer):
+    def __init__(self, iterator):
+        Tokenizer.__init__(self, iterator)
+        self.holder = None # hold all raw words
+        self.lem_map = None # hold lem mapping
+    
+    @timer_message('Starting iteration over raw corpus')
+    def __iter__(self):
+        self.do_preliminary()
+        for doc in self.iterator:
+            doc = doc.lower()
+            doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+            doc = [self.lem_map[word] for word in doc]
+            yield doc
+    
+    def _create_total_voc(self):
+        holder = set()
+        for doc in self.iterator:
+            doc = doc.lower()
+            doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+            doc = set(doc)
+            holder.add(doc)
+        return holder
+
+    def _create_lem_mapping(self, holder):
+        self.lem_map = {word:PARSER(word) for word in holder}
+    
+    @timer_message('Some preliminary work is going under the hood!')
+    def do_preliminary(self):
+        holder = self._create_total_voc()
+        self._create_lem_mapping(holder)
