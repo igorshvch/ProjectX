@@ -28,6 +28,9 @@ class IOPickler():
     def __len__(self):
         return len(self.indexer)
     
+    def __iter__(self):
+        self.load_all_items()
+    
     def _load_item(self, pos):
         if self.file.closed:
             return 'File is closed!'

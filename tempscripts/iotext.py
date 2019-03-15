@@ -1,11 +1,13 @@
 #https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-new-yield-from-syntax-in-python-3
 import re
 import random
+import tempfile
 from datetime import date
 from typing import Sequence, List, Dict, Tuple
 
 from textproc import rwtools, PARSER
 from debugger import timer, timer_message
+from tempscripts import textproctool as tpt
 
 
 class MyReaderPre():
@@ -437,46 +439,92 @@ def test_word_expand(word, morph=None):
 
 
 class Tokenizer():
-    def __init__(self, iterator):
+    def __init__(self, iterator, delim=10000):
         self.iterator = iterator
+        self.temp_store = tpt.IOPickler(tempfile.TemporaryFile())
+        self.flag_process = False
+        self.delim = delim
     
     def __iter__(self):
-        for doc in self.iterator:
-            doc = doc.lower()
-            doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+        delim = self.delim
+        if not self.flag_process:
+            self.process_documents()
+        print('Start iteration over tokenized corpus')
+        for ind, doc in enumerate(self.temp_store, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
             yield doc
     
     def __getitem__(self, index):
-        return self.iterator[index]
+        if self.flag_process:
+            return self.temp_store[index]
+        else:
+            return 'Documents were not tokenized!'
 
-class TokenizerAdv(Tokenizer):
-    def __init__(self, iterator):
-        Tokenizer.__init__(self, iterator)
-        self.holder = None # hold all raw words
+    def process_documents(self):
+        print('Start tokenization')
+        delim = self.deli,
+        for ind, doc in enumerate(self.iterator, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
+            doc = doc.lower()
+            doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+            self.temp_store.append(doc)
+        self.flag_process = True
+
+class TokenizerLem(Tokenizer):
+    def __init__(self, iterator, delim=10000):
+        Tokenizer.__init__(self, iterator, delim)
+        self.temp_store_lem = tpt.IOPickler(tempfile.TemporaryFile())
         self.lem_map = None # hold lem mapping
     
-    @timer_message('Starting iteration over raw corpus')
     def __iter__(self):
-        self.do_preliminary()
-        for doc in self.iterator:
-            doc = doc.lower()
-            doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
-            doc = [self.lem_map[word] for word in doc]
+        delim = self.delim
+        if not self.flag_process:
+            self.process_documents()
+        print('Start iteration over lemmatized corpus')
+        for ind, doc in enumerate(self.temp_store_lem, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
             yield doc
+            #doc = doc.lower()
+            #doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+            #doc = [self.lem_map[word] for word in doc]
+            #yield doc
     
-    def _create_total_voc(self):
+    def __getitem__(self, index):
+        if self.flag_process:
+            return self.temp_store_lem[index]
+        else:
+            return 'Documents were not lemmatized!'
+    
+    def process_documents(self):
+        print('Start lemmatization')
+        delim = self.delim
+        uniq_words = self.create_total_voc()
+        self.create_lem_mapping(uniq_words)
+        for ind, doc in enumerate(self.temp_store, star=1):
+            if ind % delim == 0:
+                print('Document #', ind)
+            doc = [self.lem_map[word] for word in doc]
+            self.temp_store_lem.append(doc)
+        self.flag_process = True
+
+    def create_total_voc(self):
+        print('\tTokenizing corpus!')
         holder = set()
-        for doc in self.iterator:
+        delim = self.delim
+        for ind, doc in enumerate(self.iterator, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
             doc = doc.lower()
             doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+            self.temp_store.append(doc)
             doc = set(doc)
-            holder.add(doc)
+            holder.update(doc)
+        print('\t\tTotal uniq words in corpus:', len(holder))
         return holder
 
-    def _create_lem_mapping(self, holder):
+    def create_lem_mapping(self, holder):
+        print('\tCreateing lem mapping!')
         self.lem_map = {word:PARSER(word) for word in holder}
-    
-    @timer_message('Some preliminary work is going under the hood!')
-    def do_preliminary(self):
-        holder = self._create_total_voc()
-        self._create_lem_mapping(holder)
