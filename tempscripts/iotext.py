@@ -55,29 +55,20 @@ class MyReaderPre():
         text = doc_b.decode(codec)[2:-74]
         return text
 
-
-class MyReaderEndDate():
+class MyReaderEndDate(MyReaderPre):
     def __init__(self, file):
-        self.file = file
-        self.file_size = file.seek(0, 2)
+        MyReaderPre.__init__(self, file)
         #store dates positions by date {date : [pos1, pos2]}
         #for code analysis puprose
         self.dates_to_poses = {}
         #store docs positions by date {date: [(p1s, p1e), (p2s, p2e)]}
         self.dates_to_docs = {}
         self.dates_poses = []
-        self.docs_poses = []
-    
-    def __len__(self):
-        if self.docs_poses:
-            print('Number of processed documents')
-            return len(self.docs_poses)
 
-    @timer
     def find_docs(self,
-                  pattern_date,
-                  pattern_doc_start,
-                  pattern_doc_end,
+                  pattern_date=r'Когда получен[\n\r]{1,2}',
+                  pattern_doc_start=r'Текст документа[\n\r]{1,2}',
+                  pattern_doc_end=r'-{66}',
                   codec='cp1251'):
         #Patterns 1: (r'Когда получен\n', r'Текст документа\n', r'-{66}')
         #Patterns 2: (r'Когда получен[\n\r]{1,2}', r'Текст документа[\n\r]{1,2}', r'-{66}')
@@ -120,7 +111,7 @@ class MyReaderEndDate():
     def find_docs_by_date(self, year, month, day, codec='cp1251'):
         d = date(year, month, day)
         if d not in self.dates_to_docs:
-            return None
+            yield ''
         doc_poses = self.dates_to_docs[d]
         print(
             'There are {: >3d}'.format(len(doc_poses)),
@@ -154,6 +145,44 @@ class MyReaderEndDate():
             raise KeyError('No docs by date {}',format(str(d)))
         docs_quant = len(self.dates_to_poses[d])
         print('{: <11s} : {: >4d} docs'.format(str(d), docs_quant))
+
+
+class TextInfoCollectorPre():
+    def __init__(self, folder):
+        self.folder = folder
+        self.readers = {}
+        self.docs_poses = {}
+    
+    def __len__(self):
+        return sum(len(reader) for reader in self.readers.values())
+    
+    def __iter__(self):
+        for key in sorted(self.readers.keys()):
+            yield from self.readers[key]
+    
+    def __getitem__(self, index):
+        key, pos = self.docs_poses[index]
+        return self.readers[key].find_doc(pos)
+    
+    @timer
+    def process_files(self):
+        f_paths = rwtools.collect_exist_files(self.folder, suffix='.txt')
+        for path in f_paths:
+            self.readers[path.stem] = MyReaderEndDate(
+                open(path, mode='r')
+            )
+            self.readers[path.stem].find_docs(
+                r'Когда получен\r', r'Текст документа\r', r'-{66}'
+            )
+        counter = 0
+        for key in self.readers:
+            for j in range(len(self.readers[key])):
+                self.docs_poses[counter] = (key, j)
+                counter += 1
+    
+    def find_docs_by_date(self, year, month, day):
+        for key in sorted(self.readers.keys()):
+            yield from self.readers[key].find_docs_by_date(year, month, day)
 
 class MyReader(MyReaderEndDate):
     def __init__(self, patterns_file, *args):
