@@ -468,8 +468,9 @@ def test_word_expand(word, morph=None):
 
 
 class Tokenizer():
-    def __init__(self, iterator, delim=10000):
+    def __init__(self, iterator, stpw, delim=10000):
         self.iterator = iterator
+        self.stpw = stpw
         self.temp_store = tpt.IOPickler(tempfile.TemporaryFile())
         self.flag_process = False
         self.delim = delim
@@ -498,20 +499,24 @@ class Tokenizer():
 
     def process_documents(self):
         print('Start tokenization')
+        stpw = self.stpw
         delim = self.delim
         for ind, doc in enumerate(self.iterator, start=1):
             if ind % delim == 0:
                 print('\tDocument #', ind)
             doc = doc.lower()
             doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+            doc = [word for word in doc if word not in stpw]
             self.temp_store.append(doc)
         self.flag_process = True
 
 class TokenizerLem(Tokenizer):
-    def __init__(self, iterator, delim=10000):
-        Tokenizer.__init__(self, iterator, delim)
+    def __init__(self, iterator, stpw, delim=10000, lem_map=None):
+        Tokenizer.__init__(self, iterator, stpw, delim)
         self.temp_store_lem = tpt.IOPickler(tempfile.TemporaryFile())
-        #self.lem_map = None # hold lem mapping
+        self.lem_map = lem_map
+        if self.lem_map:
+            print('\t\tTokenizerLem: get lem map!')
     
     def __iter__(self):
         delim = self.delim
@@ -522,10 +527,6 @@ class TokenizerLem(Tokenizer):
             if ind % delim == 0:
                 print('\tDocument #', ind)
             yield doc
-            #doc = doc.lower()
-            #doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
-            #doc = [self.lem_map[word] for word in doc]
-            #yield doc
     
     def __getitem__(self, index):
         if self.flag_process:
@@ -537,7 +538,11 @@ class TokenizerLem(Tokenizer):
         print('Start lemmatization')
         delim = self.delim
         uniq_words = self.create_total_voc()
-        lem_map = self.create_lem_mapping(uniq_words)
+        if self.lem_map:
+            print('\tGet lem map!')
+            lem_map = self.lem_map
+        else:
+            lem_map = self.create_lem_mapping(uniq_words)
         for ind, doc in enumerate(self.temp_store, start=1):
             if ind % delim == 0:
                 print('Document #', ind)
@@ -552,12 +557,14 @@ class TokenizerLem(Tokenizer):
             pattern = r'\b[а-я][а-я-]+'
         print('\tTokenizing corpus!')
         holder = set()
+        stpw = self.stpw
         delim = self.delim
         for ind, doc in enumerate(self.iterator, start=1):
             if ind % delim == 0:
                 print('\tDocument #', ind)
             doc = doc.lower()
             doc = re.findall(pattern, doc)
+            doc = [word for word in doc if word not in stpw]
             self.temp_store.append(doc)
             doc = set(doc)
             holder.update(doc)
@@ -569,9 +576,13 @@ class TokenizerLem(Tokenizer):
         return {word:PARSER(word) for word in holder}
 
 class TokenizerLemBigr(TokenizerLem):
-    def __init__(self, iterator, delim=10000):
-        TokenizerLem.__init__(self, iterator, delim)
+    def __init__(self, iterator, stpw, delim=10000, word_len=1, lem_map=None):
+        TokenizerLem.__init__(self, iterator, stpw, delim)
         self.temp_store_lem = tpt.IOPickler(tempfile.TemporaryFile())
+        self.lem_map = lem_map
+        self.word_len = word_len
+        if self.lem_map:
+            print('\t\tTokenizerLemBigr: get lem map!')
     
     def create_bigrams(self, doc):
         doc = [
@@ -580,12 +591,17 @@ class TokenizerLemBigr(TokenizerLem):
         ]
         return doc
 
-    def process_documents(self, word_len=4):
+    def process_documents(self):
         create_bigrams = self.create_bigrams
         print('Start bigram creation')
         delim = self.delim
+        word_len=self.word_len
         uniq_words = self.create_total_voc(mode='alph')
-        lem_map = self.create_lem_mapping(uniq_words)
+        if self.lem_map:
+            print('\tGet lem map!')
+            lem_map = self.lem_map
+        else:
+            lem_map = self.create_lem_mapping(uniq_words)
         for ind, doc in enumerate(self.temp_store, start=1):
             if ind % delim == 0:
                 print('Document #', ind)
@@ -593,4 +609,38 @@ class TokenizerLemBigr(TokenizerLem):
             doc = create_bigrams(doc)
             self.temp_store_lem.append(doc)
         self.flag_process = True
+
+class TokenizerLemTrigr(TokenizerLem):
+    def __init__(self, iterator, stpw, delim=10000, word_len=1, lem_map=None):
+        TokenizerLem.__init__(self, iterator, stpw, delim)
+        self.temp_store_lem = tpt.IOPickler(tempfile.TemporaryFile())
+        self.lem_map = lem_map
+        self.word_len = word_len
+        if self.lem_map:
+            print('\t\tTokenizerLemTrigr: get lem map!')
     
+    def create_trigrams(self, doc):
+        doc = [
+            doc[i-2]+'#'+doc[i-1]+'#'+doc[i]
+            for i in range(2, len(doc), 1)
+        ]
+        return doc
+
+    def process_documents(self):
+        create_trigrams = self.create_trigrams
+        print('Start trigram creation')
+        delim = self.delim
+        word_len=self.word_len
+        uniq_words = self.create_total_voc(mode='alph')
+        if self.lem_map:
+            print('\tGet lem map!')
+            lem_map = self.lem_map
+        else:
+            lem_map = self.create_lem_mapping(uniq_words)
+        for ind, doc in enumerate(self.temp_store, start=1):
+            if ind % delim == 0:
+                print('Document #', ind)
+            doc = [lem_map[word] for word in doc if len(word) > word_len]
+            doc = create_trigrams(doc)
+            self.temp_store_lem.append(doc)
+        self.flag_process = True
