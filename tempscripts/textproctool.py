@@ -97,6 +97,18 @@ class IOPickler():
         self.file.truncate(0)
         self.indexer=[]
 
+
+class IOPickler_testing(IOPickler):
+    def __init__(self, file):
+        IOPickler.__init__(self, file)
+    
+    def append_to_position(self, index, item):
+        if self.file.closed:
+            return 'File is closed!'
+        self.file.seek(self.indexer[index])
+        pickle.dump(item, self.file)
+        
+
 ##################################################
 
 def create_docgen(folder):
