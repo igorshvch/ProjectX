@@ -21,7 +21,7 @@ PATTERNS = {
     'p': POSITION_PURE
 }
 
-def process_exist_concls(text):
+def process_exist_concls(text, debug=False):
     spl = text[:-1].split('\n')
     questions = []
     current_question = None
@@ -31,19 +31,30 @@ def process_exist_concls(text):
         if re.match(ARTICLE, line):
             current_article = re.match(ARTICLE, line).group()
         elif re.match(THEME, line):
-            current_theme = current_article + ' ' + re.match(THEME, line).group()
+            current_theme = current_article, re.match(THEME, line).group()
         elif re.match(QUESTION, line):
-            questions.append(current_theme + ' ' + re.match(QUESTION, line).group())
+            questions.append(
+                (ind, *current_theme, re.match(QUESTION, line).group())
+            )
             current_question = None
         elif re.match(POSITION, line):
             if current_question:
-                positions.append(current_question + ' ' + re.match(POSITION, line).group())
+                positions.append(
+                    (ind, *current_question, re.match(POSITION, line).group())
+                )
             else:
-                current_question = questions.pop()
-                positions.append(current_question + ' ' + re.match(POSITION, line).group())
+                current_question = questions.pop()[1:]
+                positions.append(
+                    (ind, *current_question, re.match(POSITION, line).group())
+                )
         else:
             errors.append('{:0>4d} >>> {}'.format(ind, line))
-    return questions, positions, errors
+        res = sorted(questions + positions, key = lambda x: x[0])
+        res = [[*item[1:]] for item in res]
+    if debug:
+        return res, questions, positions, errors
+    else:
+        return res
 
 def clean_article(text):
     pass
