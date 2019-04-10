@@ -7,10 +7,22 @@ THEME = r'[0-9]{1,3}.*'
 QUESTION = r'\t[0-9]{1,3}.*'
 POSITION = r'\t\tПозиция.*'
 
+STRIP = '1234567890 !"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'
+
+
+ARTICLE_CLEANED = (
+    r'(?<=Статья ').*
+)
+
 DESICION_CLEANED = (
+    r'(?<=Вывод из судебной практики: ).*'
+)
+
+DESICION_CLEANED_POS = (
     r'(?<=По вопросу о).*(?=у судов нет единой позиции|существует две позиции судов|существует три позиции судов|существует четыре позиции судов|существует пять позиций судов)'
 )
-POSITION_PURE = r'(?<=Позиция [1-9]\.).*'
+
+POSITION_CLEANED = r'(?<=Позиция [1-9]\.).*'
 
 PATTERNS = {
     'art': ARTICLE,
@@ -18,7 +30,7 @@ PATTERNS = {
     'qst' : QUESTION,
     'pos': POSITION,
     'dc': DESICION_CLEANED,
-    'p': POSITION_PURE
+    'p': POSITION_CLEANED
 }
 
 def process_exist_concls(text, debug=False):
