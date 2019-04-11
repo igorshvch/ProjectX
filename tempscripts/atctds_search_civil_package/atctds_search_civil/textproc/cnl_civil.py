@@ -7,34 +7,23 @@ THEME = r'[0-9]{1,3}.*'
 QUESTION = r'\t[0-9]{1,3}.*'
 POSITION = r'\t\tПозиция.*'
 
-STRIP = '1234567890 !"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~'
+STRIP = '1234567890 !"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~\t\n\r'
 
+CLEANED_ARTICLE_n_THEME= r'(?<=\. ).*'
 
-ARTICLE_CLEANED = (
-    r'(?<=Статья ).*'
+__CLEANED_QUESTION = r'(?<=Вывод из судебной практики: ).*'
+
+CLEANED_QUESTION_POS_1 = (
+    r'(?<=По вопросу ).*(?=у судов нет единой позиции|существует две позиции|существует три позиции|существует четыре позиции|существует пять позиций|существуют две позиции|существуют три позиции|существуют четыре позиции|существуют пять позиций)'
 )
 
-DESICION_CLEANED = (
-    r'(?<=Вывод из судебной практики: ).*'
-)
+CLEANED_QUESTION_POS_2 = r'(?<=Вопрос ).*(?=решается судами по-разному)'
 
-DESICION_CLEANED_POS = (
-    r'(?<=По вопросу о).*(?=у судов нет единой позиции|существует две позиции судов|существует три позиции судов|существует четыре позиции судов|существует пять позиций судов)'
-)
+CLEANED_POSITION = r'(?<=Позиция ).*'
 
-POSITION_CLEANED = r'(?<=Позиция [1-9]\.).*'
 
-PATTERNS = {
-    'art': ARTICLE,
-    'thm' : THEME,
-    'qst' : QUESTION,
-    'pos': POSITION,
-    'dc': DESICION_CLEANED,
-    'p': POSITION_CLEANED
-}
-
-def process_exist_concls(text, debug=False):
-    spl = text[:-1].split('\n')
+def process_exist_index(text, full_output=False):
+    spl = text.rstrip('\n\t\r').split('\n')
     questions = []
     current_question = None
     positions = []
@@ -47,95 +36,171 @@ def process_exist_concls(text, debug=False):
         elif re.match(QUESTION, line):
             questions.append(
                 (ind, *current_theme, re.match(QUESTION, line).group())
-            )
+            ) # (IND, cur_art, cur_them, quest)
             current_question = None
         elif re.match(POSITION, line):
             if current_question:
                 positions.append(
                     (ind, *current_question, re.match(POSITION, line).group())
-                )
+                ) # (IND, cur_art, cur_them, quest, pos)
             else:
                 current_question = questions.pop()[1:]
                 positions.append(
                     (ind, *current_question, re.match(POSITION, line).group())
-                )
+                ) # (IND, cur_art, cur_them, quest, pos)
         else:
-            errors.append('{:0>4d} >>> {}'.format(ind, line))
+            errors.append((ind, line))
         res = sorted(questions + positions, key = lambda x: x[0])
         res = [[*item[1:]] for item in res]
-    if debug:
+    if full_output:
         return res, questions, positions, errors
     else:
         return res
 
-def clean_article(text):
-    pass
-
-
-def func(cleaned_dec, stored_dec):
-    from writer import writer
-    holder_errors = []
-    holder_res = []
-    cleaned_dec = [line.replace('Вывод из судебной практики: ', '') for line in cleaned_dec]
-    cleaned_dec = [line.replace('\n', '') for line in cleaned_dec]
-    spl_cl = [line.split('#')+['',''] for line in cleaned_dec]
-    print('spl_cl', len(spl_cl))
-    spl_st = [line.split('#')+['',''] for line in stored_dec]
-    print('spl_st', len(spl_st))
-    dct_com =  {(item[0]+item[1].strip('.')).replace(' ', ''):item[0]+'#'+item[1].strip('.') for item in spl_cl}
-    print('dct_com', len(dct_com))
-    spl_cl_keys = [(item[0]+item[1].strip('.')).replace(' ', '') for item in spl_cl]
-    spl_st_keys = [(item[0]+item[1]).replace(' ', '') for item in spl_st]
-    spl_cl = [item[2:] for item in spl_cl]
-    spl_st = [item[2:] for item in spl_st]
-    writer(spl_st_keys, 'spl_st_keys', mode='w')
-    writer(list(dct_com.keys()), 'dct_com_keys', mode='w')
-    flag_fisrt = True
-    for ind, key in enumerate(dct_com.keys()):
-        print(ind, end=' :: ')
+def clean_index_questions(questions):
+    results = []
+    errors = []
+    er_codes = 'art', 'them', 'quest'
+    for q in questions:
+        ind, article, theme, question = q
         try:
-            pos_in_st = spl_st_keys.index(key)
-            print ('pos_in_st', pos_in_st,)
+            article = re.search(CLEANED_ARTICLE_n_THEME, article).group()
+            article = article.strip(STRIP)
         except:
-            print('error!', end=' == ')
-            holder_errors.append(key)
-            continue
-        pos_in_cl = spl_cl_keys.index(key)
-        if flag_fisrt:
-            pos_in_st+=1
-        while pos_in_st:
-            if flag_fisrt:
-                flag_fisrt = False
-                pos_in_st-=1
-            st = '#'.join([dct_com[key], *spl_st[pos_in_st], *spl_cl[pos_in_cl]])
-            holder_res.append(st)
-            pos_in_st+=1
-            pos_in_cl+=1
-            try:
-                val = spl_st_keys[pos_in_st]
-            except:
-                pos_in_st = None
-            if val != key:
-                break
-    holder_res = [re.subn('#{1,4}', '#', line)[0].rstrip('#') for line in holder_res]
-    return holder_res, holder_errors
+            errors.append((ind, er_codes[0], article))
+        try:
+            theme = re.search(CLEANED_ARTICLE_n_THEME, theme).group()
+            theme = theme.strip(STRIP)
+        except:
+            errors.append((ind, er_codes[1], theme))
+        question = question.strip(STRIP)
+        results.append((ind, article, theme, question))
+    return results, errors
 
-def cleaner(string):
-    holder = []
-    spl = [line.lstrip('0123456789. ') for line in string.split('#')]
-    for line in spl:
-        if re.search(PATTERNS['dc'], line):
-            holder.append(re.search(PATTERNS['dc'], line).group())
-        elif re.search(PATTERNS['p'], line):
-            holder.append(re.search(PATTERNS['p'], line).group())
+def clean_index_questions_with_pos(questions):
+    results = []
+    errors = []
+    er_codes = 'art', 'them', 'quest', 'pos'
+    for q in questions:
+        ind, article, theme, question, position = q
+        try:
+            article = re.search(CLEANED_ARTICLE_n_THEME, article).group()
+            article = article.strip(STRIP)
+        except:
+            errors.append((ind, er_codes[0], article))
+        try:
+            theme = re.search(CLEANED_ARTICLE_n_THEME, theme).group()
+            theme = theme.strip(STRIP)
+        except:
+            errors.append((ind, er_codes[1], theme))
+        if re.search(CLEANED_QUESTION_POS_1, question):
+            question = re.search(CLEANED_QUESTION_POS_1, question).group()
+            question = question.strip(STRIP)
+        elif re.search(CLEANED_QUESTION_POS_2, question):
+            question = re.search(CLEANED_QUESTION_POS_2, question).group()
+            question = question.strip(STRIP)
         else:
-            holder.append(line)
-    return ' '.join(holder)
-        
+            errors.append((ind, er_codes[2], question))
+        try:
+            position = re.search(CLEANED_POSITION, position).group()
+            position = position.strip(STRIP)
+        except:
+            errors.append((ind, er_codes[3], position))
+        results.append((ind, article, theme, question, position))
+    return results, errors  
 
-def clean_string_from_pattern(lst):
-    holder = []
-    for item in lst:
-        res = cleaner(item)
-        holder.append(res)
-    return holder
+def join_index_quest_and_poses(questions, positions):
+    joined = questions + positions
+    return sorted(joined, key = lambda x: x[0])
+
+class ErrorsHandler():
+    def __init__(self):
+        self.errors_in_indices = {}
+        self.errors_in_questions = {}
+        self.errors_in_positions = {}
+    
+    def process_index_files(self, file_paths_iterable):
+        for fp in file_paths_iterable:
+            doc_index = fp.stem[:3].lstrip('0') #pathlib usage is implied
+            with open(fp, mode='r') as f:
+                text = f.read()
+            _, q, p, er = process_exist_index(text, full_output=True)
+            if er:
+                self.errors_in_indices[doc_index] = er
+                print(
+                    'Index Errors catched in file id'
+                    '{: >2s}. Total: {}'.format(doc_index, len(er))
+                )
+            res_q, er_q = clean_index_questions(q)
+            if er_q:
+                self.errors_in_questions[doc_index] = er_q
+                print(
+                    'Questions Errors catched in file id',
+                    '{: >2s}. Total: {}'.format(doc_index, len(er_q))
+                )
+            res_p, er_p = clean_index_questions_with_pos(p)
+            if er_p:
+                self.errors_in_positions[doc_index] = er_p
+                print(
+                    'Positional Errors catched in file id',
+                    '{: >2s}. Total: {}'.format(doc_index, len(er_p))
+                )
+    
+    def show_errors(self, mode='ind'):
+        modes = {
+            'ind' : self.errors_in_indices,
+            'quest' : self.errors_in_questions,
+            'pos' : self.errors_in_positions
+        }
+        for key in modes[mode]:
+            print('Doc ID: {: >5s}'.format(key))
+            for error in modes[mode][key]:
+                print('\t', error)
+            
+
+class IndexBox():
+    def __init__(self, index_list):
+        self.index_list = index_list
+        self.__processed()
+    
+    def __getitem__(self, index):
+        return self.index_list[index]
+    
+    def __len__(self):
+        return len(self.index_list)
+    
+    def __processed(self):
+        store_quest = {}
+        store_abs_ind = {}
+        for item in self.index_list: #item: (IND, art, them, quest, [pos])
+            ind = item[0]
+            key = item[3].lower().replace(' ', '')
+            store_quest[key] = item
+            store_abs_ind[ind] = item
+        self.store_quest = store_quest
+        self.store_abs_ind = store_abs_ind
+    
+    def find_by_quest(self, quest, verbose=False):
+        norm_string = quest.strip(STRIP)
+        norm_string = norm_string.lower().replace(' ', '')
+        if norm_string in self.store_quest:
+            if verbose:
+                print('Exact match!')
+            return self.store_quest[norm_string]
+        else:
+            if verbose:
+                print('No exact match. Tring to find most close result')
+            for key in self.store_quest:
+                if norm_string in key:
+                    return self.store_quest[norm_string]
+            if verbose:
+                print('No matches!')
+            return None
+    
+    def find_by_index(self, index):
+        if index in self.store_abs_ind:
+            return self.store_abs_ind[index]
+        else:
+            raise IndexError('index out of range')
+            
+        
