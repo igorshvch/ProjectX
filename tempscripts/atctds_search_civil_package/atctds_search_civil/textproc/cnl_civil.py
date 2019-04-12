@@ -1,5 +1,4 @@
 import re
-from . import rwtools
 
 ###Content=====================================================================
 ARTICLE = r'Статья [0-9]{1,4}.*'
@@ -9,20 +8,72 @@ POSITION = r'\t\tПозиция.*'
 
 STRIP = '1234567890 !"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~\t\n\r'
 
+CONTENTS = {  
+    '1': 'ВОУ',
+    '2': 'Факторинг',
+    '3': 'Агентирование',
+    '4': 'Хранение. Общие положения',
+    '6': 'Подряд общие положения',
+    '7': 'КП общие положения',
+    '8': 'РКП',
+    '9': 'Поставка',
+    '10': 'Заем',
+    '11': 'Кредит',
+    '12': 'ТКК',
+    '13': 'Хранение на товарном складе',
+    '14': 'Аренда общие положения',
+    '15': 'Поручение',
+    '16': 'Комиссия',
+    '17': 'АЗС',
+    '34': 'Доверительное управление имуществом',
+    '36': 'АТС',
+    '38': 'Банковский счет',
+    '40': 'Расчеты',
+    '42': 'Банковский вклад',
+    '44': 'КПН'
+}
+
 CLEANED_ARTICLE_n_THEME= r'(?<=\. ).*'
 
-__CLEANED_QUESTION = r'(?<=Вывод из судебной практики: ).*'
-
 CLEANED_QUESTION_POS_1 = (
-    r'(?<=По вопросу ).*(?=у судов нет единой позиции|существует две позиции|существует три позиции|существует четыре позиции|существует пять позиций|существуют две позиции|существуют три позиции|существуют четыре позиции|существуют пять позиций)'
+    r'(?<=По вопросу ).*(?=у судов нет единой позиции|'
+    + r'существует две позиции|существует три позиции|'
+    + r'существует четыре позиции|существует пять позиций|'
+    + r'существуют две позиции|существуют три позиции|'
+    + r'существуют четыре позиции|существуют пять позиций)'
 )
 
 CLEANED_QUESTION_POS_2 = r'(?<=Вопрос ).*(?=решается судами по-разному)'
 
+CLEANED_QUESTION_POS = {
+    '0main': (
+        r'(?<=По вопросу ).*(?=у судов нет единой позиции|'
+        + r'существует две позиции|существует три позиции|'
+        + r'существует четыре позиции|существует пять позиций|'
+        + r'существуют две позиции|существуют три позиции|'
+        + r'существуют четыре позиции|существуют пять позиций)'
+    ),
+    'dev1': r'(?<=Вопрос ).*(?=решается судами по-разному)',
+    'dev2': r'.+(?=оценивается судами по-разному\Z)',
+    'dev3': r'(?<=Единого подхода относительно ).*(?=в судебной практике нет)',
+    'dev4': r'(?<=В судебной практике нет единого подхода по вопросу ).*',
+    'dev5': r'(?<=По вопросу).*(?=позиции судов различны)',
+    'dev6': r'(?<=По вопросу ).*(?=имеется две позиции)',
+    'dev7': r'(?<=В отношении ).*(?=существует две позиции)'
+}
+
 CLEANED_POSITION = r'(?<=Позиция ).*'
 
+__CLEANED_QUESTION = r'(?<=Вывод из судебной практики: ).*'
 
-def process_exist_index(text, full_output=False):
+def clean_question(text):
+    for key in sorted(CLEANED_QUESTION_POS.keys()):
+        if re.search(CLEANED_QUESTION_POS[key], text):
+            question = re.search(CLEANED_QUESTION_POS[key], text).group()
+            return question.strip(STRIP)
+    return text.strip(STRIP)
+
+def process_exist_contents(text, full_output=False):
     spl = text.rstrip('\n\t\r').split('\n')
     questions = []
     current_question = None
@@ -57,7 +108,7 @@ def process_exist_index(text, full_output=False):
     else:
         return res
 
-def clean_index_questions(questions):
+def clean_contents_questions(questions):
     results = []
     errors = []
     er_codes = 'art', 'them', 'quest'
@@ -77,7 +128,7 @@ def clean_index_questions(questions):
         results.append((ind, article, theme, question))
     return results, errors
 
-def clean_index_questions_with_pos(questions):
+def clean_contents_questions_with_pos(questions):
     results = []
     errors = []
     er_codes = 'art', 'them', 'quest', 'pos'
@@ -93,14 +144,7 @@ def clean_index_questions_with_pos(questions):
             theme = theme.strip(STRIP)
         except:
             errors.append((ind, er_codes[1], theme))
-        if re.search(CLEANED_QUESTION_POS_1, question):
-            question = re.search(CLEANED_QUESTION_POS_1, question).group()
-            question = question.strip(STRIP)
-        elif re.search(CLEANED_QUESTION_POS_2, question):
-            question = re.search(CLEANED_QUESTION_POS_2, question).group()
-            question = question.strip(STRIP)
-        else:
-            errors.append((ind, er_codes[2], question))
+        question = clean_question(question)
         try:
             position = re.search(CLEANED_POSITION, position).group()
             position = position.strip(STRIP)
@@ -109,46 +153,46 @@ def clean_index_questions_with_pos(questions):
         results.append((ind, article, theme, question, position))
     return results, errors  
 
-def join_index_quest_and_poses(questions, positions):
+def join_contents_quest_and_poses(questions, positions):
     joined = questions + positions
     return sorted(joined, key = lambda x: x[0])
 
 class ErrorsHandler():
     def __init__(self):
-        self.errors_in_indices = {}
+        self.errors_in_contents = {}
         self.errors_in_questions = {}
         self.errors_in_positions = {}
     
-    def process_index_files(self, file_paths_iterable):
+    def process_contents_files(self, file_paths_iterable):
         for fp in file_paths_iterable:
-            doc_index = fp.stem[:3].lstrip('0') #pathlib usage is implied
+            doc_idn = fp.stem[:3].lstrip('0') #pathlib usage is implied
             with open(fp, mode='r') as f:
                 text = f.read()
-            _, q, p, er = process_exist_index(text, full_output=True)
+            _, q, p, er = process_exist_contents(text, full_output=True)
             if er:
-                self.errors_in_indices[doc_index] = er
+                self.errors_in_contents[doc_idn] = er
                 print(
                     'Index Errors catched in file id'
-                    '{: >2s}. Total: {}'.format(doc_index, len(er))
+                    '{: >2s}. Total: {}'.format(doc_idn, len(er))
                 )
-            res_q, er_q = clean_index_questions(q)
+            _, er_q = clean_contents_questions(q)
             if er_q:
-                self.errors_in_questions[doc_index] = er_q
+                self.errors_in_questions[doc_idn] = er_q
                 print(
                     'Questions Errors catched in file id',
-                    '{: >2s}. Total: {}'.format(doc_index, len(er_q))
+                    '{: >2s}. Total: {}'.format(doc_idn, len(er_q))
                 )
-            res_p, er_p = clean_index_questions_with_pos(p)
+            _, er_p = clean_contents_questions_with_pos(p)
             if er_p:
-                self.errors_in_positions[doc_index] = er_p
+                self.errors_in_positions[doc_idn] = er_p
                 print(
                     'Positional Errors catched in file id',
-                    '{: >2s}. Total: {}'.format(doc_index, len(er_p))
+                    '{: >2s}. Total: {}'.format(doc_idn, len(er_p))
                 )
     
-    def show_errors(self, mode='ind'):
+    def show_errors(self, mode='cnt'):
         modes = {
-            'ind' : self.errors_in_indices,
+            'cnt' : self.errors_in_contents,
             'quest' : self.errors_in_questions,
             'pos' : self.errors_in_positions
         }
@@ -156,23 +200,24 @@ class ErrorsHandler():
             print('Doc ID: {: >5s}'.format(key))
             for error in modes[mode][key]:
                 print('\t', error)
-            
 
-class IndexBox():
-    def __init__(self, index_list):
-        self.index_list = index_list
-        self.__processed()
+
+class ContentsBox():
+    def __init__(self, idn, contents_list):
+        self.contents_list = contents_list
+        self.idn = idn
+        self.__process()
     
     def __getitem__(self, index):
-        return self.index_list[index]
+        return self.contents_list[index]
     
     def __len__(self):
-        return len(self.index_list)
+        return len(self.contents_list)
     
-    def __processed(self):
+    def __process(self):
         store_quest = {}
         store_abs_ind = {}
-        for item in self.index_list: #item: (IND, art, them, quest, [pos])
+        for item in self.contents_list: #item: (IND, art, them, quest, [pos])
             ind = item[0]
             key = item[3].lower().replace(' ', '')
             store_quest[key] = item
@@ -181,20 +226,29 @@ class IndexBox():
         self.store_abs_ind = store_abs_ind
     
     def find_by_quest(self, quest, verbose=False):
-        norm_string = quest.strip(STRIP)
+        norm_string = clean_question(quest)
         norm_string = norm_string.lower().replace(' ', '')
         if norm_string in self.store_quest:
             if verbose:
-                print('Exact match!')
+                print(
+                    'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
+                    +' >>> Exact match!'
+                )
             return self.store_quest[norm_string]
         else:
             if verbose:
-                print('No exact match. Tring to find most close result')
+                print(
+                    'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
+                    +' >>> No exact match. Tring to find most close result'
+                )
             for key in self.store_quest:
                 if norm_string in key:
                     return self.store_quest[norm_string]
             if verbose:
-                print('No matches!')
+                print(
+                    'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
+                    +' >>> No matches!'
+                )
             return None
     
     def find_by_index(self, index):
@@ -202,5 +256,39 @@ class IndexBox():
             return self.store_abs_ind[index]
         else:
             raise IndexError('index out of range')
+
+class ContentsBoxCollector():
+    def __init__(self, file_paths_iterable):
+        self.store = {}
+        self.__process(file_paths_iterable)
+    
+    def __getitem__(self, index):
+        pass
+    
+    def __process(self, file_paths_iterable):
+        for fp in file_paths_iterable:
+            doc_idn = fp.stem[:3].lstrip('0') #pathlib usage is implied
+            with open(fp, mode='r') as f:
+                text = f.read()
+            _, q, p, _ = process_exist_contents(text, full_output=True)
+            res_q, _ = clean_contents_questions(q)
+            res_p, _ = clean_contents_questions_with_pos(p)
+            joined = join_contents_quest_and_poses(res_q, res_p)
+            self.store[doc_idn] = ContentsBox(
+                (doc_idn, CONTENTS[doc_idn]), joined
+            )
+    
+    def find_by_quest(self, quest, verbose=False):
+        speaker = 'ContentsBoxCollector:'
+        for key in sorted(self.store.keys()):
+            res = self.store[key].find_by_quest(quest, verbose=verbose)
+            if res:
+                print(speaker, 'match found!')
+                print(speaker, key+',', CONTENTS[key])
+                break
+        return res
+
+
+
             
         
