@@ -59,7 +59,8 @@ CLEANED_QUESTION_POS = {
     'dev4': r'(?<=В судебной практике нет единого подхода по вопросу ).*',
     'dev5': r'(?<=По вопросу).*(?=позиции судов различны)',
     'dev6': r'(?<=По вопросу ).*(?=имеется две позиции)',
-    'dev7': r'(?<=В отношении ).*(?=существует две позиции)'
+    'dev7': r'(?<=В отношении ).*(?=существует две позиции)',
+    'dev8': r'(?<=Вывод из судебной практики).*'
 }
 
 CLEANED_POSITION = r'(?<=Позиция ).*'
@@ -77,7 +78,7 @@ def process_exist_contents(text, full_output=False):
     spl = text.rstrip('\n\t\r').split('\n')
     questions = []
     current_question = None
-    positions = []
+    questions_with_pos = []
     errors = []
     for ind, line in enumerate(spl):
         if re.match(ARTICLE, line):
@@ -91,20 +92,20 @@ def process_exist_contents(text, full_output=False):
             current_question = None
         elif re.match(POSITION, line):
             if current_question:
-                positions.append(
+                questions_with_pos.append(
                     (ind, *current_question, re.match(POSITION, line).group())
                 ) # (IND, cur_art, cur_them, quest, pos)
             else:
                 current_question = questions.pop()[1:]
-                positions.append(
+                questions_with_pos.append(
                     (ind, *current_question, re.match(POSITION, line).group())
                 ) # (IND, cur_art, cur_them, quest, pos)
         else:
             errors.append((ind, line))
-        res = sorted(questions + positions, key = lambda x: x[0])
+        res = sorted(questions + questions_with_pos, key = lambda x: x[0])
         res = [[*item[1:]] for item in res]
     if full_output:
-        return res, questions, positions, errors
+        return res, questions, questions_with_pos, errors
     else:
         return res
 
@@ -128,11 +129,11 @@ def clean_contents_questions(questions):
         results.append((ind, article, theme, question))
     return results, errors
 
-def clean_contents_questions_with_pos(questions):
+def clean_contents_questions_with_pos(questions_with_pos):
     results = []
     errors = []
     er_codes = 'art', 'them', 'quest', 'pos'
-    for q in questions:
+    for q in questions_with_pos:
         ind, article, theme, question, position = q
         try:
             article = re.search(CLEANED_ARTICLE_n_THEME, article).group()
@@ -153,8 +154,8 @@ def clean_contents_questions_with_pos(questions):
         results.append((ind, article, theme, question, position))
     return results, errors  
 
-def join_contents_quest_and_poses(questions, positions):
-    joined = questions + positions
+def join_contents_quest_and_poses(questions, questions_with_pos):
+    joined = questions + questions_with_pos
     return sorted(joined, key = lambda x: x[0])
 
 class ErrorsHandler():
@@ -172,21 +173,21 @@ class ErrorsHandler():
             if er:
                 self.errors_in_contents[doc_idn] = er
                 print(
-                    'Index Errors catched in file id'
+                    'Index Errors caught in file id'
                     '{: >2s}. Total: {}'.format(doc_idn, len(er))
                 )
             _, er_q = clean_contents_questions(q)
             if er_q:
                 self.errors_in_questions[doc_idn] = er_q
                 print(
-                    'Questions Errors catched in file id',
+                    'Questions Errors caught in file id',
                     '{: >2s}. Total: {}'.format(doc_idn, len(er_q))
                 )
             _, er_p = clean_contents_questions_with_pos(p)
             if er_p:
                 self.errors_in_positions[doc_idn] = er_p
                 print(
-                    'Positional Errors catched in file id',
+                    'Positional Errors caught in file id',
                     '{: >2s}. Total: {}'.format(doc_idn, len(er_p))
                 )
     
@@ -202,6 +203,26 @@ class ErrorsHandler():
                 print('\t', error)
 
 
+def add_zeroes_or_increment(string):
+    '''
+    Take string and append to it two zeroes.
+    If two zeroes are already at the end of the string
+    increment numerical string ending by one:
+    'somestring00' -> 'somestring01'
+    '''
+    ending = string[-2:]
+    if ending.isdigit():
+        if ending == '99':
+            raise ValueError(
+                'string ending has already reached maximum possible value'
+                )
+        num = int(ending)
+        incremented_ending = '{:0>2d}'.format(num+1)
+        return string[:-2] + incremented_ending
+    else:
+        return string+'00'
+
+
 class ContentsBox():
     def __init__(self, idn, contents_list):
         self.contents_list = contents_list
@@ -209,7 +230,13 @@ class ContentsBox():
         self.__process()
     
     def __getitem__(self, index):
-        return self.contents_list[index]
+        '''
+        Retrun element by absolute index created by process_exist_contents()
+        '''
+        if index in self.store_abs_ind:
+            return self.store_abs_ind[index]
+        else:
+            raise IndexError('index out of range')
     
     def __len__(self):
         return len(self.contents_list)
@@ -220,7 +247,20 @@ class ContentsBox():
         for item in self.contents_list: #item: (IND, art, them, quest, [pos])
             ind = item[0]
             key = item[3].lower().replace(' ', '')
-            store_quest[key] = item
+            key = add_zeroes_or_increment(key)
+            if key in store_quest:
+                key = add_zeroes_or_increment(key)
+                store_quest[key] = item
+            else:
+                store_quest[key] = item
+            #Some error hides here.
+            #Before adding key incrementation similar 'keys' rewrote each other:
+            #len(cbc.store['6'].store_abs_ind) => 478
+            #len(cbc.store['6'].store_quest) => 422
+            #After adding key incrementation some dicitionary items
+            #are still missed:
+            #len(cbc2.store['6'].store_abs_ind) => 478
+            #len(cbc2.store['6'].store_quest) => 473
             store_abs_ind[ind] = item
         self.store_quest = store_quest
         self.store_abs_ind = store_abs_ind
@@ -228,18 +268,23 @@ class ContentsBox():
     def find_by_quest(self, quest, verbose=False):
         norm_string = clean_question(quest)
         norm_string = norm_string.lower().replace(' ', '')
+        norm_string = add_zeroes_or_increment(norm_string)
         if norm_string in self.store_quest:
             if verbose:
                 print(
                     'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
                     +' >>> Exact match!'
                 )
-            return self.store_quest[norm_string]
+            res = []
+            while norm_string in self.store_quest:
+                res.append(self.store_quest[norm_string])
+                norm_string = add_zeroes_or_increment(norm_string)
+            return res
         else:
             if verbose:
                 print(
                     'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
-                    +' >>> No exact match. Tring to find most close result'
+                    +' >>> No exact match. Trying to find most close result'
                 )
             for key in self.store_quest:
                 if norm_string in key:
@@ -250,12 +295,12 @@ class ContentsBox():
                     +' >>> No matches!'
                 )
             return None
-    
-    def find_by_index(self, index):
-        if index in self.store_abs_ind:
-            return self.store_abs_ind[index]
-        else:
-            raise IndexError('index out of range')
+
+    def find_by_relevant_index(self, index):
+        '''
+        Return element from in-class content_list
+        '''
+        return self.contents_list[index]
 
 class ContentsBoxCollector():
     def __init__(self, file_paths_iterable):
