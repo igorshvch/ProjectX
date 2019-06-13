@@ -35,15 +35,15 @@ CONTENTS = {
 
 CLEANED_ARTICLE_n_THEME= r'(?<=\. ).*'
 
-CLEANED_QUESTION_POS_1 = (
-    r'(?<=По вопросу ).*(?=у судов нет единой позиции|'
-    + r'существует две позиции|существует три позиции|'
-    + r'существует четыре позиции|существует пять позиций|'
-    + r'существуют две позиции|существуют три позиции|'
-    + r'существуют четыре позиции|существуют пять позиций)'
-)
+#CLEANED_QUESTION_POS_1 = (
+#    r'(?<=По вопросу ).*(?=у судов нет единой позиции|'
+#    + r'существует две позиции|существует три позиции|'
+#    + r'существует четыре позиции|существует пять позиций|'
+#    + r'существуют две позиции|существуют три позиции|'
+#    + r'существуют четыре позиции|существуют пять позиций)'
+#)
 
-CLEANED_QUESTION_POS_2 = r'(?<=Вопрос ).*(?=решается судами по-разному)'
+#CLEANED_QUESTION_POS_2 = r'(?<=Вопрос ).*(?=решается судами по-разному)'
 
 CLEANED_QUESTION_POS = {
     '0main': (
@@ -65,7 +65,7 @@ CLEANED_QUESTION_POS = {
 
 CLEANED_POSITION = r'(?<=Позиция ).*'
 
-__CLEANED_QUESTION = r'(?<=Вывод из судебной практики: ).*'
+#__CLEANED_QUESTION = r'(?<=Вывод из судебной практики: ).*'
 
 def clean_question(text):
     for key in sorted(CLEANED_QUESTION_POS.keys()):
@@ -205,7 +205,7 @@ class ErrorsHandler():
 
 def add_zeroes_or_increment(string):
     '''
-    Take string and append to it two zeroes.
+    Take string and append two zeroes to it .
     If two zeroes are already at the end of the string
     increment numerical string ending by one:
     'somestring00' -> 'somestring01'
@@ -332,6 +332,54 @@ class ContentsBoxCollector():
                 print(speaker, key+',', CONTENTS[key])
                 break
         return res
+
+
+class QuestCleaner():
+    '''
+    Translate questions with annotations in raw text format to dictionary:
+    {
+        quest1: [ann1, ann2, ann3,... annN],
+        quest2: [ann1,...]
+        ...
+    }
+    '''
+
+    def __init__(self, file):
+        self.raw_text = file.read()
+        self.data = None
+    
+    def transform(self):
+        data = {}
+        split_level_1 = self.raw_text.split('\n')
+        for ind, question in enumerate(split_level_1):
+            try:
+                first_char = question[0]
+                print(ind)
+            except IndexError:
+                print(ind, 'FAIL')
+                continue
+            if isinstance(first_char, int) or isinstance(first_char, str):
+                split_level_2 = question.split('\t')
+                if split_level_2[0] in data:
+                    raise KeyError(
+                        'Question ia alreqdy in the dictionary!', 
+                        split_level_2[0]
+                    )
+                data[split_level_2[0]] = [
+                    text for text in split_level_2[1:]
+                    if re.subn(' [\n\t]', '' ,text)[0] 
+                ]
+            else:
+                pass
+        self.data = data
+    
+    def find_by_quest(self, quest):
+        norm_string = clean_question(quest)
+        norm_string = norm_string.lower().replace(' ', '')
+        if norm_string in self.data:
+            return self.data[norm_string]
+        else:
+            raise KeyError('Question is not stored!')
 
 
 
