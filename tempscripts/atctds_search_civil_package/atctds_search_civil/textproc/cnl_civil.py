@@ -404,5 +404,6 @@ def make_easter_greate_again(QC, CBC):
     '''
     for item in QC:
         question, anns = item
-        
-        
+        contents_gen = CBD.find_by_quest(question)
+        for ind, contents_item in enumerate(contents_gen):
+            pass    
