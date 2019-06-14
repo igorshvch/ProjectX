@@ -265,7 +265,7 @@ class ContentsBox():
         self.store_quest = store_quest
         self.store_abs_ind = store_abs_ind
     
-    def find_by_quest(self, quest, verbose=False):
+    def find_by_quest(self, quest, verbose=False): #, testmode=False):
         norm_string = clean_question(quest)
         norm_string = norm_string.lower().replace(' ', '')
         norm_string = add_zeroes_or_increment(norm_string)
@@ -275,26 +275,31 @@ class ContentsBox():
                     'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
                     +' >>> Exact match!'
                 )
-            res = []
+            #res = []
             while norm_string in self.store_quest:
-                res.append(self.store_quest[norm_string])
+                yield self.store_quest[norm_string]
                 norm_string = add_zeroes_or_increment(norm_string)
-            return res
-        else:
-            if verbose:
-                print(
-                    'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
-                    +' >>> No exact match. Trying to find most close result'
-                )
-            for key in self.store_quest:
-                if norm_string in key:
-                    return self.store_quest[norm_string]
-            if verbose:
-                print(
-                    'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
-                    +' >>> No matches!'
-                )
-            return None
+                #res.append(self.store_quest[norm_string])
+                #norm_string = add_zeroes_or_increment(norm_string)
+            #return res
+        #else:
+        #    if testmode:
+        #        if verbose:
+        #            print(
+        #                'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
+        #                +' >>> No exact match. Trying to find most close result'
+        #            )
+        #        for key in self.store_quest:
+        #            if norm_string in key:
+        #                return self.store_quest[norm_string]
+        #        if verbose:
+        #            print(
+        #                'Dox ID: {: >2s}, {: <35s}'.format(self.idn[0], self.idn[1])
+        #                +' >>> No matches!'
+        #            )
+        #       return None
+        #    else:
+        #        raise KeyError('Question is not stored!')
 
     def find_by_relevant_index(self, index):
         '''
@@ -324,14 +329,15 @@ class ContentsBoxCollector():
             )
     
     def find_by_quest(self, quest, verbose=False):
-        speaker = 'ContentsBoxCollector:'
+        #speaker = 'ContentsBoxCollector:'
         for key in sorted(self.store.keys()):
-            res = self.store[key].find_by_quest(quest, verbose=verbose)
-            if res:
-                print(speaker, 'match found!')
-                print(speaker, key+',', CONTENTS[key])
-                break
-        return res
+            yield from self.store[key].find_by_quest(quest, verbose=verbose)
+            #res = self.store[key].find_by_quest(quest, verbose=verbose)
+            #if res:
+            #    print(speaker, 'match found!')
+            #    print(speaker, key+',', CONTENTS[key])
+            #    break
+        #return res
 
 
 class QuestCleaner():
@@ -344,11 +350,20 @@ class QuestCleaner():
     }
     '''
 
-    def __init__(self, file):
-        self.raw_text = file.read()
+    def __init__(self, raw_text):
+        self.raw_text = raw_text
         self.data = None
+        self._transform()
     
-    def transform(self):
+    def __iter__(self):
+        if self.data:
+            for key in self.data:
+                yield key, self.data[key]
+        else:
+            raise StopIteration('Data attribute is empty!')
+
+    
+    def _transform(self):
         data = {}
         split_level_1 = self.raw_text.split('\n')
         for ind, question in enumerate(split_level_1):
@@ -374,14 +389,20 @@ class QuestCleaner():
         self.data = data
     
     def find_by_quest(self, quest):
-        norm_string = clean_question(quest)
-        norm_string = norm_string.lower().replace(' ', '')
+        norm_string = quest #clean_question(quest)
+        #norm_string = norm_string.lower().replace(' ', '')
         if norm_string in self.data:
             return self.data[norm_string]
         else:
             raise KeyError('Question is not stored!')
 
 
-
-            
+def make_easter_greate_again(QC, CBC):
+    '''
+    QC - QuestCleaner() instance
+    CBC - ContentsBoxCollector() instance
+    '''
+    for item in QC:
+        question, anns = item
+        
         
