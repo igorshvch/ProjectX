@@ -152,6 +152,7 @@ class TextInfoCollectorPre():
         self.folder = folder
         self.readers = {}
         self.docs_poses = {}
+        self.dates_range = []
     
     def __len__(self):
         return sum(len(reader) for reader in self.readers.values())
@@ -166,6 +167,7 @@ class TextInfoCollectorPre():
     
     @timer
     def process_files(self):
+        dates_range = []
         f_paths = rwtools.collect_exist_files(self.folder, suffix='.txt')
         for path in f_paths:
             self.readers[path.stem] = MyReaderEndDate(
@@ -174,11 +176,21 @@ class TextInfoCollectorPre():
             self.readers[path.stem].find_docs(
                 r'Когда получен\r', r'Текст документа\r', r'-{66}'
             )
+            dates_range.append(
+                min(self.readers[path.stem].dates_to_poses.keys())
+            )
+            dates_range.append(
+                max(self.readers[path.stem].dates_to_poses.keys())
+            )
         counter = 0
         for key in self.readers:
             for j in range(len(self.readers[key])):
                 self.docs_poses[counter] = (key, j)
                 counter += 1
+        minimum = min(dates_range)
+        maximum = max(dates_range)
+        self.dates_range.append(minimum)
+        self.dates_range.append(maximum)
     
     def find_docs_by_date(self, year, month, day):
         for key in sorted(self.readers.keys()):

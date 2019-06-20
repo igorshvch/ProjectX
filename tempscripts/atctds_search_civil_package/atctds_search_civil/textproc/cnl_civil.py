@@ -397,10 +397,11 @@ class QuestCleaner():
             raise KeyError('Question is not stored!')
 
 
-def make_easter_greate_again(QC, CBC):
+def join_contents_and_questions(QC, CBC):
     '''
     QC - QuestCleaner() instance
     CBC - ContentsBoxCollector() instance
+    Return questions joined with arcticles, thems and annotations
     '''
     for item in QC:
         question, anns = item
