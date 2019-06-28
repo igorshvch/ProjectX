@@ -16,13 +16,6 @@ logging.basicConfig(
     style='{', level=logging.INFO
 )
 
-#Preliminaries
-#   corpus_iterator - 'iot.MyReaderPre' object
-#   dct - 'gensim.corpora.Dictionary' object, corresponds to bag-of-words model
-#   pkl - 'tpt.IOPickler' object connected to file with stored BOW VSM
-#   tfidf - 'gensim.models.TfidfModel' object
-#   pkl_tfidf - 'tpt.IOPickler' object connected to file with stored TFIDF VSM
-
 def define_globs():
     global WORK_DIRECTORY
     global TODAY
@@ -30,6 +23,17 @@ def define_globs():
     TODAY = time.strftime('%Y-%m-%d')
 
 define_globs()
+
+#Preliminaries
+#   corpus_iterator - 'iot.MyReaderPre'/'iot.MyReaderEndDate'
+#                      or 'iot.TextInfoCollectorPre'  object
+#   dct - 'gensim.corpora.Dictionary' object
+#         corresponds to bag-of-words (BOW) model
+#   pkl - 'tpt.IOPickler' object connected
+#         to file with stored BOW vector space model (VSM)
+#   tfidf - 'gensim.models.TfidfModel' object
+#   pkl_tfidf - 'tpt.IOPickler' object connected to file with stored TFIDF VSM
+
 
 def create_path(ending):
     today_ending = TODAY+'_'+ending
@@ -76,7 +80,7 @@ def create_dct(corpus_iterator,
             lem_map=lem_map
         )
     else:
-        return 'Unknown "mode" key word arg'
+        raise ValueError('Unknown "mode" keyword arg')
     dct = gsm.corpora.Dictionary(tknz, prune_at=4000000)
     stpw_ids = dct.doc2idx(stpw)
     dct.filter_tokens(bad_ids=stpw_ids)
@@ -371,6 +375,11 @@ class QueryProcessor():
     
 def form_one_output(models, q_proc, q_len='full'):
     '''
+    models - 'dict' object with priveously created gensim models
+    q_proc - local var for 'QueryProcessor' object
+    q_len - flag to chose query type from 'QueryProccesor' object: full or short
+    
+    Return:
     [
         (6727, 0.3714553117752075, 'bgrlemtok'),
         (7563, 0.3039359599351883, 'lemtok'),
@@ -413,6 +422,12 @@ def form_one_output_with_amendments(models,
                                     amend_mode='bgr',
                                     amend=0.7):
     '''
+    models - 'dict' object with priveously created gensim models
+    q_proc - local var for 'QueryProcessor' object
+    q_len - flag to chose query type from 'QueryProccesor' object: full or short
+    amend - amount by which score value increases
+    
+    Return:
     [
         (6727, 0.3714553117752075, 'bgrlemtok'),
         (7563, 0.3039359599351883, 'lemtok'),
@@ -467,6 +482,9 @@ def find_req(corpus_iterator, index, index_var='one'):
 
 def print_all_res(res, corpus_iterator, index_var='one', p_mode='full'):
     '''
+    index_var - flag to chose proper strings with requesits in court decisions 
+
+    Print:
     1 >>>   6727 >>> АРБИТРАЖНЫЙ СУД МОСКОВСКОГО ОКРУГА от 8 февраля 2016 г. по делу N А40-105380/15                 >>>  0.371455 >>> bgrlemraw
     2 >>>   7563 >>> АРБИТРАЖНЫЙ СУД ПОВОЛЖСКОГО ОКРУГА от 16 апреля 2018 г. N Ф06-31853/2018                        >>>  0.303936 >>>    lemraw
     3 >>>   7009 >>> АРБИТРАЖНЫЙ СУД МОСКОВСКОГО ОКРУГА от 28 сентября 2015 г. по делу N А40-208639/14               >>>  0.289477 >>> bgrlemraw

@@ -557,7 +557,7 @@ class TokenizerLem(Tokenizer):
             lem_map = self.create_lem_mapping(uniq_words)
         for ind, doc in enumerate(self.temp_store, start=1):
             if ind % delim == 0:
-                print('Document #', ind)
+                print('\tDocument #', ind)
             doc = [lem_map[word] for word in doc]
             self.temp_store_lem.append(doc)
         self.flag_process = True
@@ -584,7 +584,7 @@ class TokenizerLem(Tokenizer):
         return holder
 
     def create_lem_mapping(self, holder):
-        print('\tCreateing lem mapping!')
+        print('\tCreating lem mapping!')
         return {word:PARSER(word) for word in holder}
 
 class TokenizerLemBigr(TokenizerLem):
@@ -604,6 +604,7 @@ class TokenizerLemBigr(TokenizerLem):
         return doc
 
     def process_documents(self):
+        counter = 0
         create_bigrams = self.create_bigrams
         print('Start bigram creation')
         delim = self.delim
@@ -619,7 +620,9 @@ class TokenizerLemBigr(TokenizerLem):
                 print('Document #', ind)
             doc = [lem_map[word] for word in doc if len(word) > word_len]
             doc = create_bigrams(doc)
+            counter+=doc
             self.temp_store_lem.append(doc)
+        print('\t\tBigrams in corpus:', counter)
         self.flag_process = True
 
 class TokenizerLemTrigr(TokenizerLem):
