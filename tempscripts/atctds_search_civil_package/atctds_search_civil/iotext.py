@@ -7,7 +7,7 @@ from typing import Sequence, List, Dict, Tuple
 
 from textproc import rwtools, PARSER
 from debugger import timer, timer_message
-import iopickler as iop
+from . import iopickler as iop
 
 
 class MyReader():
@@ -497,15 +497,20 @@ def test_word_expand(word, morph=None):
 
 
 class Tokenizer():
-    def __init__(self, iterator, stpw, delim=10000, temp_store=None):
+    def __init__(self,
+                 iterator,
+                 stpw,
+                 delim=10000,
+                 temp_store=None,
+                 processed=False):
         self.iterator = iterator
         self.stpw = stpw
         self.temp_store = self._store_data(temp_store)
-        self.flag_process = False
+        self.flag_process = processed
         self.delim = delim
     
     def _store_data(self, temp_store):
-        speaker = '\t'+self.__class__.__name__.upper()+':'
+        speaker = '\tClass '+self.__class__.__name__+':'
         if not temp_store:
             print(speaker, 'File not found! Create temporary file')
             return iop.IOPickler(tempfile.TemporaryFile())
@@ -554,15 +559,17 @@ class TokenizerLem(Tokenizer):
                  stpw,
                  delim=10000,
                  lem_map=None,
-                 temp_store_lem=None):
+                 temp_store_lem=None,
+                 processed=False):
         Tokenizer.__init__(self, iterator, stpw, delim, temp_store=None)
         self.temp_store_lem = self._store_lem_data(temp_store_lem)
+        self.flag_process = processed
         self.lem_map = lem_map
         if self.lem_map:
             print('\t\tTokenizerLem: get lem map!')
     
     def _store_lem_data(self, temp_store_lem):
-        speaker = '\t'+self.__class__.__name__.upper()+':'
+        speaker = '\t'+self.__class__.__name__+':'
         if not temp_store_lem:
             print(speaker, 'File not found! Create temporary file')
             return iop.IOPickler(tempfile.TemporaryFile())

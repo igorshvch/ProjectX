@@ -10,6 +10,7 @@ class IOPickler():
         self.file = file
         self.indexer = []
         self.file_name = file.name
+        self.create_index()
     
     def __getitem__(self, int_num):
         try:
