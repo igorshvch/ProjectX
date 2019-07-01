@@ -1,35 +1,87 @@
-﻿#https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-new-yield-from-syntax-in-python-3
+#https://stackoverflow.com/questions/9708902/in-practice-what-are-the-main-uses-for-the-new-yield-from-syntax-in-python-3
 import re
 import random
+import tempfile
 from datetime import date
 from typing import Sequence, List, Dict, Tuple
 
-from atctds_search_civil.textproc import rwtools
-from atctds_search_civil.debugger import timer
+from textproc import rwtools, PARSER
+from debugger import timer, timer_message
+import iopickler as iop
 
 
-class MyReaderBase():
+class MyReader():
+    '''
+    Class defines interface to file's contents.
+    It provides methodes to iterate over documents
+    which were previously write to one .txt file.
+    Delimiters between documents can be set manually
+    '''
     def __init__(self, file):
         self.file = file
         self.file_size = file.seek(0, 2)
+        self.docs_poses = []
+    
+    def __len__(self):
+        if self.docs_poses:
+            return len(self.docs_poses)
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self.find_doc(i)
+    
+    def __getitem__(self, index):
+        return self.find_doc(index)
+
+    def find_docs(self,
+                  pattern_doc_end,
+                  codec='cp1251'):
+        #Pattern: r'-{66}'
+        buffer = self.file.buffer
+        buffer.seek(0)
+        last_position = start_pos = 0
+        while True:
+            line = buffer.readline().decode(codec)
+            current_position = buffer.tell()
+            if re.match(pattern_doc_end, line):
+                end_pos = current_position
+                self.docs_poses.append((start_pos, end_pos))
+                start_pos = end_pos
+                continue
+            if last_position == current_position:
+                break
+            else:
+                last_position = current_position
+
+    def find_doc(self, index, codec='cp1251'):
+        buffer = self.file.buffer
+        start, stop = self.docs_poses[index]
+        buffer.seek(start)
+        doc_b = buffer.read(stop-start)
+        text = doc_b.decode(codec)[2:-74]
+        return text
+
+class MyReaderEndDate(MyReader):
+    '''
+    Sub class which defines specific method to find
+    court desicions previously writen to single .txt file.
+    It is implied that desicions are separated by 
+    blocks of metainformation such as dates of loading
+    to 'K+' base
+    '''
+    def __init__(self, file):
+        MyReader.__init__(self, file)
         #store dates positions by date {date : [pos1, pos2]}
         #for code analysis puprose
         self.dates_to_poses = {}
         #store docs positions by date {date: [(p1s, p1e), (p2s, p2e)]}
         self.dates_to_docs = {}
         self.dates_poses = []
-        self.docs_poses = []
-    
-    def __len__(self):
-        if self.docs_poses:
-            print('Number of processed documents')
-            return len(self.docs_poses)
 
-    @timer
     def find_docs(self,
-                  pattern_date,
-                  pattern_doc_start,
-                  pattern_doc_end,
+                  pattern_date=r'Когда получен[\n\r]{1,2}',
+                  pattern_doc_start=r'Текст документа[\n\r]{1,2}',
+                  pattern_doc_end=r'-{66}',
                   codec='cp1251'):
         #Patterns 1: (r'Когда получен\n', r'Текст документа\n', r'-{66}')
         #Patterns 2: (r'Когда получен[\n\r]{1,2}', r'Текст документа[\n\r]{1,2}', r'-{66}')
@@ -72,7 +124,7 @@ class MyReaderBase():
     def find_docs_by_date(self, year, month, day, codec='cp1251'):
         d = date(year, month, day)
         if d not in self.dates_to_docs:
-            return None
+            yield ''
         doc_poses = self.dates_to_docs[d]
         print(
             'There are {: >3d}'.format(len(doc_poses)),
@@ -107,9 +159,13 @@ class MyReaderBase():
         docs_quant = len(self.dates_to_poses[d])
         print('{: <11s} : {: >4d} docs'.format(str(d), docs_quant))
 
-class MyReader(MyReaderBase):
+
+class MyReaderGroups(MyReaderEndDate):
+    '''
+    Sub class that groups court desicions by each desicion's content
+    '''
     def __init__(self, patterns_file, *args):
-        MyReaderBase.__init__(self, *args)
+        MyReaderEndDate.__init__(self, *args)
         self.patterns = self._unpack_patterns_from_file(patterns_file)
         #store docs positions by date {date: [pos1, pos2]}
         self.dates_to_docs = {}
@@ -240,9 +296,9 @@ class MyReader(MyReaderBase):
                 yield self.find_doc(ind) 
 
 
-class MyReader_testing(MyReader):
+class MyReader_testing(MyReaderGroups):
     def __init__(self, *args):
-        MyReader.__init__(self, *args)
+        MyReaderGroups.__init__(self, *args)
     
     def show_class_info(self):
         if not self.classes_to_poses:
@@ -272,8 +328,56 @@ class MyReader_testing(MyReader):
                         holder.append((ind, self.patterns[key]))
         return holder
 
-
 class TextInfoCollector():
+    def __init__(self, folder):
+        self.folder = folder
+        self.readers = {}
+        self.docs_poses = {}
+        self.dates_range = []
+    
+    def __len__(self):
+        return sum(len(reader) for reader in self.readers.values())
+    
+    def __iter__(self):
+        for key in sorted(self.readers.keys()):
+            yield from self.readers[key]
+    
+    def __getitem__(self, index):
+        key, pos = self.docs_poses[index]
+        return self.readers[key].find_doc(pos)
+    
+    @timer
+    def process_files(self):
+        dates_range = []
+        f_paths = rwtools.collect_exist_files(self.folder, suffix='.txt')
+        for path in f_paths:
+            self.readers[path.stem] = MyReaderEndDate(
+                open(path, mode='r')
+            )
+            self.readers[path.stem].find_docs(
+                r'Когда получен\r', r'Текст документа\r', r'-{66}'
+            )
+            dates_range.append(
+                min(self.readers[path.stem].dates_to_poses.keys())
+            )
+            dates_range.append(
+                max(self.readers[path.stem].dates_to_poses.keys())
+            )
+        counter = 0
+        for key in self.readers:
+            for j in range(len(self.readers[key])):
+                self.docs_poses[counter] = (key, j)
+                counter += 1
+        minimum = min(dates_range)
+        maximum = max(dates_range)
+        self.dates_range.append(minimum)
+        self.dates_range.append(maximum)
+    
+    def find_docs_by_date(self, year, month, day):
+        for key in sorted(self.readers.keys()):
+            yield from self.readers[key].find_docs_by_date(year, month, day)
+
+class TextInfoCollectorGropus():
     def __init__(self, folder, path_to_patterns):
         self.path_to_patterns = path_to_patterns
         self.folder = folder
@@ -282,7 +386,7 @@ class TextInfoCollector():
     def process_files(self):
         f_paths = rwtools.collect_exist_files(self.folder, suffix='.txt')
         for path in f_paths:
-            self.readers[path.stem] = MyReader(
+            self.readers[path.stem] = MyReaderGroups(
                 open(self.path_to_patterns, mode='r'),
                 open(path, mode='r')
             )
@@ -318,7 +422,7 @@ class TextInfoCollector():
             if d in self.readers[key].dates_to_docs:
                 print(key, '===', self.readers[key].dates_to_docs[d])
 
-
+#######################################################################
 
 def test_find_positions_by_pattern(folder, pattern):
     '''
@@ -388,3 +492,210 @@ def test_word_expand(word, morph=None):
     w = morph.parse(word)[0]
     res = [i[0] for i in w.lexeme]
     return res
+
+#######################################################################
+
+
+class Tokenizer():
+    def __init__(self, iterator, stpw, delim=10000, temp_store=None):
+        self.iterator = iterator
+        self.stpw = stpw
+        self.temp_store = self._store_data(temp_store)
+        self.flag_process = False
+        self.delim = delim
+    
+    def _store_data(self, temp_store):
+        speaker = '\t'+self.__class__.__name__.upper()+':'
+        if not temp_store:
+            print(speaker, 'File not found! Create temporary file')
+            return iop.IOPickler(tempfile.TemporaryFile())
+        else:
+            print(speaker, 'Using file "{}"'.format(temp_store.name))
+            return iop.IOPickler(temp_store)
+
+    def __iter__(self):
+        delim = self.delim
+        if not self.flag_process:
+            self.process_documents()
+        print('Start iteration over tokenized corpus')
+        for ind, doc in enumerate(self.temp_store, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
+            yield doc
+    
+    def __getitem__(self, index):
+        if self.flag_process:
+            return self.temp_store[index]
+        else:
+            return 'Documents were not tokenized!'
+    
+    def __len__(self):
+        if self.flag_process:
+            return len(self.temp_store)
+        else:
+            return 'Documents were not tokenized!'
+
+    def process_documents(self):
+        print('Start tokenization')
+        stpw = self.stpw
+        delim = self.delim
+        for ind, doc in enumerate(self.iterator, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
+            doc = doc.lower()
+            doc = re.findall(r'\b[А-я0-9][А-я0-9-]*', doc)
+            doc = [word for word in doc if word not in stpw]
+            self.temp_store.append(doc)
+        self.flag_process = True
+
+class TokenizerLem(Tokenizer):
+    def __init__(self,
+                 iterator,
+                 stpw,
+                 delim=10000,
+                 lem_map=None,
+                 temp_store_lem=None):
+        Tokenizer.__init__(self, iterator, stpw, delim, temp_store=None)
+        self.temp_store_lem = self._store_lem_data(temp_store_lem)
+        self.lem_map = lem_map
+        if self.lem_map:
+            print('\t\tTokenizerLem: get lem map!')
+    
+    def _store_lem_data(self, temp_store_lem):
+        speaker = '\t'+self.__class__.__name__.upper()+':'
+        if not temp_store_lem:
+            print(speaker, 'File not found! Create temporary file')
+            return iop.IOPickler(tempfile.TemporaryFile())
+        else:
+            print(speaker, 'Using file "{}"'.format(temp_store_lem.name))
+            return iop.IOPickler(temp_store_lem)
+
+    def __iter__(self):
+        delim = self.delim
+        if not self.flag_process:
+            self.process_documents()
+        print('Start iteration over lemmatized corpus')
+        for ind, doc in enumerate(self.temp_store_lem, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
+            yield doc
+    
+    def __getitem__(self, index):
+        if self.flag_process:
+            return self.temp_store_lem[index]
+        else:
+            return 'Documents were not lemmatized!'
+    
+    def process_documents(self):
+        print('Start lemmatization')
+        delim = self.delim
+        uniq_words = self.create_total_voc()
+        if self.lem_map:
+            print('\tGet lem map!')
+            lem_map = self.lem_map
+        else:
+            lem_map = self.create_lem_mapping(uniq_words)
+        for ind, doc in enumerate(self.temp_store, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
+            doc = [lem_map[word] for word in doc]
+            self.temp_store_lem.append(doc)
+        self.flag_process = True
+
+    def create_total_voc(self, mode='alph_dgts'):
+        if mode == 'alph_dgts':
+            pattern = r'\b[а-я0-9][а-я0-9-]*'
+        elif mode == 'alph':
+            pattern = r'\b[а-я][а-я-]+'
+        print('\tTokenizing corpus!')
+        holder = set()
+        stpw = self.stpw
+        delim = self.delim
+        for ind, doc in enumerate(self.iterator, start=1):
+            if ind % delim == 0:
+                print('\tDocument #', ind)
+            doc = doc.lower()
+            doc = re.findall(pattern, doc)
+            doc = [word for word in doc if word not in stpw]
+            self.temp_store.append(doc)
+            doc = set(doc)
+            holder.update(doc)
+        print('\t\tTotal uniq tokens in corpus:', len(holder))
+        return holder
+
+    def create_lem_mapping(self, holder):
+        print('\tCreating lem mapping!')
+        return {word:PARSER(word) for word in holder}
+
+class TokenizerLemBigr(TokenizerLem):
+    def __init__(self, iterator, stpw, delim=10000, word_len=1, lem_map=None):
+        TokenizerLem.__init__(self, iterator, stpw, delim)
+        self.temp_store_lem = iop.IOPickler(tempfile.TemporaryFile())
+        self.lem_map = lem_map
+        self.word_len = word_len
+        if self.lem_map:
+            print('\t\tTokenizerLemBigr: get lem map!')
+    
+    def create_bigrams(self, doc):
+        doc = [
+            doc[i-1]+'#'+doc[i]
+            for i in range(1, len(doc), 1)
+        ]
+        return doc
+
+    def process_documents(self):
+        counter = 0
+        create_bigrams = self.create_bigrams
+        print('Start bigram creation')
+        delim = self.delim
+        word_len=self.word_len
+        uniq_words = self.create_total_voc(mode='alph')
+        if self.lem_map:
+            print('\tGet lem map!')
+            lem_map = self.lem_map
+        else:
+            lem_map = self.create_lem_mapping(uniq_words)
+        for ind, doc in enumerate(self.temp_store, start=1):
+            if ind % delim == 0:
+                print('Document #', ind)
+            doc = [lem_map[word] for word in doc if len(word) > word_len]
+            doc = create_bigrams(doc)
+            counter+=doc
+            self.temp_store_lem.append(doc)
+        print('\t\tBigrams in corpus:', counter)
+        self.flag_process = True
+
+class TokenizerLemTrigr(TokenizerLem):
+    def __init__(self, iterator, stpw, delim=10000, word_len=1, lem_map=None):
+        TokenizerLem.__init__(self, iterator, stpw, delim)
+        self.temp_store_lem = iop.IOPickler(tempfile.TemporaryFile())
+        self.lem_map = lem_map
+        self.word_len = word_len
+        if self.lem_map:
+            print('\t\tTokenizerLemTrigr: get lem map!')
+    
+    def create_trigrams(self, doc):
+        doc = [
+            doc[i-2]+'#'+doc[i-1]+'#'+doc[i]
+            for i in range(2, len(doc), 1)
+        ]
+        return doc
+
+    def process_documents(self):
+        create_trigrams = self.create_trigrams
+        print('Start trigram creation')
+        delim = self.delim
+        word_len=self.word_len
+        uniq_words = self.create_total_voc(mode='alph')
+        if self.lem_map:
+            print('\tGet lem map!')
+            lem_map = self.lem_map
+        else:
+            lem_map = self.create_lem_mapping(uniq_words)
+        for ind, doc in enumerate(self.temp_store, start=1):
+            if ind % delim == 0:
+                print('Document #', ind)
+            doc = [lem_map[word] for word in doc if len(word) > word_len]
+            doc = create_trigrams(doc)
+            self.temp_store_lem.append(doc)
+        self.flag_process = True
