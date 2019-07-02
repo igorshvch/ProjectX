@@ -48,7 +48,6 @@ def create_path(ending):
             break
     return fp
 
-
 @timer_with_func_name
 def create_dct(corpus_iterator,
                stpw,
