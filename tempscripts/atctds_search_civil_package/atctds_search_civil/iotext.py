@@ -562,13 +562,13 @@ class TokenizerLem(Tokenizer):
                  temp_store_lem=None,
                  processed=False):
         Tokenizer.__init__(self, iterator, stpw, delim, temp_store=None)
-        self.temp_store_lem = self._store_lem_data(temp_store_lem)
+        self.temp_store_lem = self._store_lem_data1(temp_store_lem)
         self.flag_process = processed
         self.lem_map = lem_map
         if self.lem_map:
             print('\tTokenizerLem: get lem map!')
     
-    def _store_lem_data(self, temp_store_lem):
+    def _store_lem_data1(self, temp_store_lem):
         speaker = '\tTokenizerLem:'
         if not temp_store_lem:
             print(speaker, 'File not found! Create temporary file')
@@ -649,15 +649,16 @@ class TokenizerLemBigr(TokenizerLem):
                  temp_store_lem=None,
                  processed=False):
         TokenizerLem.__init__(self, iterator, stpw, delim, temp_store_lem=None)
-        self.temp_store_lem = self._store_lem_data(temp_store_lem)
+        self.temp_store_lem = self._store_lem_data2(temp_store_lem)
         self.flag_process = processed
         self.lem_map = lem_map
         self.word_len = word_len
         if self.lem_map:
             print('\tTokenizerLemBigr: get lem map!')
     
-    def _store_lem_data(self, temp_store_lem):
+    def _store_lem_data2(self, temp_store_lem):
         speaker = '\tTokenizerLemBigr:'
+        print(speaker, 'Override TokenizerLem, using', speaker[:-1].upper())
         if not temp_store_lem:
             print(speaker, 'File not found! Create temporary file')
             return iop.IOPickler(tempfile.TemporaryFile())

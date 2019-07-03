@@ -103,6 +103,9 @@ def save_object(py_obj, name, save_folder):
     path = save_folder.joinpath(name)
     save_pickle(py_obj, str(path))
 
+def create_new_binary(file_name, folder):
+    return open(Path(folder).joinpath(file_name), mode='a+b')
+
 
 ###Testing=====================================================================
 if __name__ == '__main__':

@@ -124,7 +124,7 @@ def create_similarity_object(pkl_tfidf, dct, num_best):
 def find_key_words(num_kwords, tokens_vector, dct, file=None):
     '''
     Find num_kwords key words from vector.
-    Vector must be an gensim.models.TfidfModel()[gensim.corpora.Dictionary().doc2bow(list_of_tokens)]
+    Vector must be a gensim.models.TfidfModel()[gensim.corpora.Dictionary().doc2bow(list_of_tokens)]
     '''
     top_tokens = sorted(
         tokens_vector, key=lambda x: x[1], reverse=True
@@ -137,7 +137,7 @@ def find_key_words(num_kwords, tokens_vector, dct, file=None):
         for key, val in dct.token2id.items():
             if val == token:
                 st = '{: >4d}     {: >40s}     {: >7d}     {: >8.6f}'.format(
-                    idn, key,val,score
+                    idn, key, val, score
                 )
                 if file:
                     file.write(st+'\n')
