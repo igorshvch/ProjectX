@@ -53,7 +53,7 @@ class TreeView(ttk.Frame):
             relief='sunken'
         )
 
-        self.tv = ttk.Treeview(self, columns=cols)
+        self.tv = ttk.Treeview(self, columns=('ЭСС', ))
         self.tv.heading('#0', text='Кирпич', command= lambda:self.sort('head'))
         self.tv.column('#0', width=100, stretch=True)
         self.tv.heading('ЭСС', text='ЭСС', command=lambda:self.sort('col'))
