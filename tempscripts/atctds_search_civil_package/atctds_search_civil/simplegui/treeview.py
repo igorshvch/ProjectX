@@ -4,11 +4,13 @@ from tkinter import filedialog as fd
 from pathlib import Path
 
 from atctds_search_civil import debugger as dbg
+from .patterns import BuildingInterface
 
 
-class TreeView(ttk.Frame):
-    def __init__(self, parent=tk.Tk(), **kwargs):
+class TreeView(ttk.Frame, BuildingInterface):
+    def __init__(self, parent, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
+        BuildingInterface.__init__(self)
         self.info = None
         self.tv = None
         self.btn_1 = None
@@ -74,14 +76,3 @@ class TreeView(ttk.Frame):
         self.btn_1.grid(column=0, row=1, sticky='we')
         self.label_inf.grid(column=1, row=1, sticky='we')
         self.scroll.grid(column=2, row=0, sticky='nes')
-    
-    def start_widget(self):
-        self.build_widgets()
-        self.grid_inner_widgets()
-        self.mainloop()
-    
-    def start_widget_solo(self):
-        self.build_widgets()
-        self.grid_inner_widgets()
-        self.grid(column=0, row=0, sticky='wnes')
-        self.mainloop()
