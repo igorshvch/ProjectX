@@ -2,19 +2,25 @@ import tkinter as tk
 from tkinter import ttk
 
 from atctds_search_civil import debugger as dbg
-from .patterns import BuildingInterface
+from .patterns import CommonInterface
 
-class ListView(ttk.Frame, BuildingInterface):
+class ListView(ttk.Frame, CommonInterface):
     def __init__(self, parent, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
-        BuildingInterface.__init__(self)
+        CommonInterface.__init__(self, parent)
         self.label_scrl = None #label
         self.lstb = None #tk.Listbox
         self.scrl = None #ttk.Scrollbar
+        self.btn_clean_all = None
         self.label_count1 = None #label with description of the following widget
         self.label_count2 = None #label to count quantity of loaded conclusions
         self.lstb_var = tk.StringVar()
         self.l_count_var = tk.StringVar()
+    
+    @dbg.method_speaker('Cleaning ListView widgets!')
+    def cmd_clean_all(self):
+        self.lstb_var.set('')
+        self.l_count_var.set('')
 
     def build_widgets(self):
         self.lb_scrl = ttk.Label(
@@ -37,11 +43,16 @@ class ListView(ttk.Frame, BuildingInterface):
             command=self.lstb.yview
         )
         self.lstb['yscrollcommand'] = self.scrl.set
+        self.btn_clean_all = ttk.Button(
+            self,
+            text='X',
+            command=self.cmd_clean_all,
+            width=2
+        )
         self.label_count1 = ttk.Label(
             self,
             text='Всего выводов:',
-            anchor='w',
-            width=14,
+            anchor='e',
             relief='flat'
         )
         self.label_count2 = ttk.Label(
@@ -54,10 +65,11 @@ class ListView(ttk.Frame, BuildingInterface):
     
     def grid_inner_widgets(self):
         self.lb_scrl.grid(column=0, row=0, columnspan=3, sticky='we')
-        self.lstb.grid(column=0, row=1, columnspan=2, sticky='we')
-        self.scrl.grid(column=2, row=1, sticky='ns')
-        self.label_count1.grid(column=0, row=2, sticky='we')
-        self.label_count2.grid(column=1, row=2, columnspan=2, sticky='e')
+        self.lstb.grid(column=0, row=1, columnspan=3, sticky='we')
+        self.scrl.grid(column=3, row=1, sticky='nws')
+        self.btn_clean_all.grid(column=0, row=2, sticky='w')
+        self.label_count1.grid(column=1, row=2, sticky='e')
+        self.label_count2.grid(column=2, row=2, sticky='e')
 
 ###############################################################################
 ############################### testing: ######################################
@@ -81,21 +93,19 @@ class ListViewTest(ListView):
         ListView.__init__(self, parent, **kwargs)  
 
     @dbg.method_speaker('Inserting randomly generated data!')
-    def _insert_data(self):
+    def insert_data(self):
         data = gts(rd.randint(3,20))
         count = str(len(data))
         self.lstb_var.set(data)
         self.l_count_var.set(count)
     
     @dbg.method_speaker('Deleting data!')
-    def _erase_data(self):
+    def erase_data(self):
         self.lstb_var.set('')
         self.l_count_var.set('')
     
-    def start_widget_solo(self):
+    def start_widget(self):
         self.build_widgets()
-        self.lstb.bind('<Double-1>', lambda x: self._insert_data())
-        self.lstb.bind('<Double-3>', lambda x: self._erase_data())
+        self.lstb.bind('<Double-1>', lambda x: self.insert_data())
+        self.lstb.bind('<Double-3>', lambda x: self.erase_data())
         self.grid_inner_widgets()
-        self.grid(column=0, row=0, sticky='nswe')
-        self.mainloop()

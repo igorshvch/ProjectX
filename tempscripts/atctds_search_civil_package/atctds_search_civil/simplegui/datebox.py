@@ -6,12 +6,12 @@ import calendar
 from datetime import date
 
 from atctds_search_civil import debugger as dbg
-from .patterns import BuildingInterface
+from .patterns import CommonInterface
 
-class DateBox(ttk.Frame, BuildingInterface):
+class DateBox(ttk.Frame, CommonInterface):
     def __init__(self, parent, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
-        BuildingInterface.__init__(self)
+        CommonInterface.__init__(self, parent)
         self.months = [
             'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
             'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
@@ -36,7 +36,7 @@ class DateBox(ttk.Frame, BuildingInterface):
         self.l_Month_var = tk.StringVar()
         self.l_Year_var = tk.StringVar()
         #internal instance data:
-        self.flags_date = {flag:False for flag in ('M', 'Y')}
+        self.flags_date = {flag:False for flag in ('D', 'M', 'Y')}
     
     @dbg.method_speaker('Loading external data to DateBox class instance (years)')
     def load_external_data(self, list_of_years):
@@ -56,19 +56,37 @@ class DateBox(ttk.Frame, BuildingInterface):
         self.cmb_Day['values'] = [
             str(i) for i in range(1, days_in_month+1, 1)
         ]
+    
+    #def clean_day_widget_and_var(self): #Preventing inconvinience in date
+    #    '''
+    #    For preventing mismatch between new date
+    #    and current month's range or days range
+    #    in leap year
+    #    '''
+    #    self.flags_date['D'] = False
+    #    self.cmb_Day.selection_clear()
+    #    self.cmb_Day.set('')
+    #    self.l_Day_var.set('')
 
     def process_year(self, event):
+    #    if self.flags_date['D']:
+    #        self.clean_day_widget_and_var()
         self.l_Year_var.set(self.cmb_Year.get())
         self.flags_date['Y'] = True
         if self.flags_date['Y'] and self.flags_date['M']:
             self.count_days_in_month()
 
     def process_month(self, event):
+    #    if self.flags_date['D']:
+    #        self.clean_day_widget_and_var()
         ind = self.cmb_Month.current()
         self.l_Month_var.set(self.months_for_label[ind])
         self.flags_date['M'] = True
         if self.flags_date['Y'] and self.flags_date['M']:
             self.count_days_in_month()
+    
+    def process_day(self, event):
+        self.flags_date['D'] = True
     
     @dbg.method_speaker('Cleaning ComboBox widgets!')
     def cmd_clean_all(self):
@@ -138,6 +156,8 @@ class DateBox(ttk.Frame, BuildingInterface):
             width=15,
             state='disabled'
         )
+        self.cmb_Month.bind('<<ComboboxSelected>>', self.process_day)
+
         #last row widgets:
         self.btn_clean_all = ttk.Button(
             self,
@@ -204,16 +224,14 @@ class DateBoxTest(DateBox):
         day = int(self.cmb_Day.get()) if self.cmb_Day.get() else 1
         print('\t', date(year, month, day))
 
-    def start_widget_solo(self):
+    def start_widget(self):
         self.build_widgets()
         self.cmb_Year['values'] = ('2017', '2018', '2019')
         for cmb in self.cmb_Month, self.cmb_Year:
             cmb['state'] = 'readonly'
-        self.label_head.bind('<Double-3>', lambda x: self.clear_all())
+        self.label_head.bind('<Control-Button-1>', lambda x: self.clear_all())
         self.label_head.bind(
-            '<Double-1>',
+            '<Control-Button-3>',
             lambda x: self.extract_internal_data()
         )
         self.grid_inner_widgets()
-        self.grid(column=0, row=0, sticky='nswe')
-        self.mainloop()

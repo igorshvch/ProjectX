@@ -4,13 +4,13 @@ from tkinter import filedialog as fd
 from pathlib import Path
 
 from atctds_search_civil import debugger as dbg
-from .patterns import BuildingInterface
+from .patterns import CommonInterface
 
 
-class TreeView(ttk.Frame, BuildingInterface):
+class TreeView(ttk.Frame, CommonInterface):
     def __init__(self, parent, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
-        BuildingInterface.__init__(self)
+        CommonInterface.__init__(self, parent)
         self.info = None
         self.tv = None
         self.btn_1 = None

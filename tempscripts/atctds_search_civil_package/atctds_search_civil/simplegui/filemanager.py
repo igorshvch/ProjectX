@@ -4,16 +4,17 @@ from tkinter import filedialog as fd
 from pathlib import Path
 
 from atctds_search_civil import debugger as dbg
-from .patterns import BuildingInterface
+from .patterns import CommonInterface
 
 
-class FileManager(ttk.Frame, BuildingInterface):
+class FileManager(ttk.Frame, CommonInterface):
     def __init__(self, parent, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
-        BuildingInterface.__init__(self)
+        CommonInterface.__init__(self, parent)
         self.l_CD_var = tk.StringVar() #Court Desicions
         self.l_CNL_var = tk.StringVar() #Conclusions
         self.l_Save_var = tk.StringVar()
+        self.label_head = None #Heading label
         self.btn_clean_all = None
         self.btn_Load = None
         self.btn_CD = None #Court Desicions
@@ -33,7 +34,7 @@ class FileManager(ttk.Frame, BuildingInterface):
         res = {key:val for key,val in tk_string_vars.items()}
         return res
 
-    @dbg.method_speaker('Cleaning all widgets!')
+    @dbg.method_speaker('Cleaning FileManager widgets!')
     def cmd_clean_all(self):
         btns = (
             self.btn_Load,
@@ -105,11 +106,16 @@ class FileManager(ttk.Frame, BuildingInterface):
             btn['state'] = 'normal'
 
     def build_widgets(self):
+        self.label_head = ttk.Label( #Court Desicions
+            self,
+            text = 'Выберите пути для загрузки и сохранения файлов:',
+            anchor='center'
+        )
         self.btn_clean_all = ttk.Button(
             self,
-            text='Очистить\n      все',
+            text='Х',
             command=self.cmd_clean_all,
-            width=9
+            width=2
         )
         self.btn_CD = ttk.Button( #Court Desicions
             self,
@@ -125,7 +131,7 @@ class FileManager(ttk.Frame, BuildingInterface):
         )
         self.btn_CNL = ttk.Button( #Conclusions
             self,
-            text='Путь к кирпичам',
+            text='Путь к выводам (кирпичам)',
             command=self.cmd_CNL,
             width=42
         )
@@ -176,18 +182,19 @@ class FileManager(ttk.Frame, BuildingInterface):
         )
     
     def grid_inner_widgets(self):
-        self.btn_clean_all.grid(column=0, row=0, rowspan=3, sticky='ns')
-        self.btn_CD.grid(column=1, row=0, sticky='we')
-        self.btn_Load.grid(column=2, row=0, sticky='w')
-        self.btn_CNL.grid(column=1, row=1, columnspan=2, sticky='w')
-        self.btn_Save.grid(column=1, row=2, columnspan=2, sticky='w')
+        self.label_head.grid(column=1, row=0, columnspan=2, sticky='w')
+        self.btn_clean_all.grid(column=0, row=1, rowspan=3, sticky='ns')
+        self.btn_CD.grid(column=1, row=1, sticky='we')
+        self.btn_Load.grid(column=2, row=1, sticky='we')
+        self.btn_CNL.grid(column=1, row=2, columnspan=2, sticky='we')
+        self.btn_Save.grid(column=1, row=3, columnspan=2, sticky='we')
 
         labels = (self.label_CD, self.label_CNL, self.label_Save)
-        for row_id, label in enumerate(labels):
+        for row_id, label in enumerate(labels, start=1):
             label.grid(column=3, row=row_id, sticky='we')
 
         clean_btns = (
             self.btn_clean_CD, self.btn_clean_CNL, self.btn_clean_Save
         )
-        for row_id, btn_clean in enumerate(clean_btns):
+        for row_id, btn_clean in enumerate(clean_btns, start=1):
             btn_clean.grid(column=4, row=row_id, sticky='w')
