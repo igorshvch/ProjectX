@@ -1,7 +1,5 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import filedialog as fd
-from pathlib import Path
 import calendar
 from datetime import date
 
@@ -57,28 +55,28 @@ class DateBox(ttk.Frame, CommonInterface):
             str(i) for i in range(1, days_in_month+1, 1)
         ]
     
-    #def clean_day_widget_and_var(self): #Preventing inconvinience in date
-    #    '''
-    #    For preventing mismatch between new date
-    #    and current month's range or days range
-    #    in leap year
-    #    '''
-    #    self.flags_date['D'] = False
-    #    self.cmb_Day.selection_clear()
-    #    self.cmb_Day.set('')
-    #    self.l_Day_var.set('')
+    def clean_day_widget_and_var(self): #Preventing inconvinience in date
+        '''
+        For preventing mismatch between new date
+        and current month's range or days range
+        in leap year
+        '''
+        self.flags_date['D'] = False
+        self.cmb_Day.selection_clear()
+        self.cmb_Day.set('')
+        self.l_Day_var.set('')
 
     def process_year(self, event):
-    #    if self.flags_date['D']:
-    #        self.clean_day_widget_and_var()
+        if self.flags_date['D']:
+            self.clean_day_widget_and_var()
         self.l_Year_var.set(self.cmb_Year.get())
         self.flags_date['Y'] = True
         if self.flags_date['Y'] and self.flags_date['M']:
             self.count_days_in_month()
 
     def process_month(self, event):
-    #    if self.flags_date['D']:
-    #        self.clean_day_widget_and_var()
+        if self.flags_date['D']:
+            self.clean_day_widget_and_var()
         ind = self.cmb_Month.current()
         self.l_Month_var.set(self.months_for_label[ind])
         self.flags_date['M'] = True
@@ -146,7 +144,7 @@ class DateBox(ttk.Frame, CommonInterface):
             self,
             values=self.months,
             width=15,
-            state='disabled'
+            state='normal'
         )
         self.cmb_Month.bind('<<ComboboxSelected>>', self.process_month)
 
@@ -156,7 +154,7 @@ class DateBox(ttk.Frame, CommonInterface):
             width=15,
             state='disabled'
         )
-        self.cmb_Month.bind('<<ComboboxSelected>>', self.process_day)
+        self.cmb_Day.bind('<<ComboboxSelected>>', self.process_day)
 
         #last row widgets:
         self.btn_clean_all = ttk.Button(

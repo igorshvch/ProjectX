@@ -1,4 +1,4 @@
-from time import time
+from time import time, strftime
 import functools
 
 def timer(func):
@@ -30,11 +30,12 @@ def timer_with_func_name(func):
     def wrapper(*args, **kwargs):
         local_timer = time()
         print('-'*69)
-        print('DO >>> {}'.format(func.__name__))
+        print('===========>DO: {:.>53s}'.format(func.__name__))
         res = func(*args, **kwargs)
+        print('======>COMLETE: {:.>53s}'.format(func.__name__))
         end_time = time() - local_timer
         print(
-            'EVALUATION TIME: {: >9.4f} min ({: >9.4f} sec)'.format(
+            '=========>TIME: {: >9.4f} min ({: >9.4f} sec)'.format(
                 end_time/60, end_time
             )
         )
@@ -67,10 +68,21 @@ def method_speaker(stmt=''):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             speaker = args[0].__class__.__name__+'.'+func.__name__
+            current_time = strftime('%Y-%m-%d, %a, %H:%M:%S')
             if not stmt:
-                print(speaker+':', 'Put some logic here!')
+                print(
+                    current_time+'\t',
+                    speaker+': ',
+                    'Put some logic here!', 
+                    sep=''
+                )
             else:
-                print(speaker+':', stmt)
+                print(
+                    current_time+'\t',
+                    speaker+': ',
+                    stmt,
+                    sep=''
+                )
             return func(*args, **kwargs)
         return wrapper
     return decorator

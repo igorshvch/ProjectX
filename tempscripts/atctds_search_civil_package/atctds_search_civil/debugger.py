@@ -1,4 +1,4 @@
-from time import time
+from time import time, strftime
 import functools
 
 def timer(func):
@@ -68,10 +68,21 @@ def method_speaker(stmt=''):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             speaker = args[0].__class__.__name__+'.'+func.__name__
+            current_time = strftime('%Y-%m-%d, %a, %H:%M:%S')
             if not stmt:
-                print(speaker+':', 'Put some logic here!')
+                print(
+                    current_time+'\t',
+                    speaker+': ',
+                    'Put some logic here!', 
+                    sep=''
+                )
             else:
-                print(speaker+':', stmt)
+                print(
+                    current_time+'\t',
+                    speaker+': ',
+                    stmt,
+                    sep=''
+                )
             return func(*args, **kwargs)
         return wrapper
     return decorator
