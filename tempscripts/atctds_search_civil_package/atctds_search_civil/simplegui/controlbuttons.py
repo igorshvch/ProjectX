@@ -30,6 +30,10 @@ class ControlButtons(ttk.Frame, CommonInterface):
             text='\nНовый сеанс\n',
             command=self.cmd_clean_all
         )
+        self.widget_dict = {
+            'btn_Start': self.btn_Start,
+            'btn_clean_all': self.btn_clean_all
+        }
     
     def grid_inner_widgets(self):
         self.btn_Start.grid(column=0, row=0, sticky='we')

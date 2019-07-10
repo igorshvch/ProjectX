@@ -180,6 +180,16 @@ class FileManager(ttk.Frame, CommonInterface):
             command=lambda: self.cmd_clean('Save'),
             width=2
         )
+        self.widget_dict = {
+            'btn_clean_all': self.btn_clean_all,
+            'btn_CD': self.btn_CD,
+            'btn_Load': self.btn_Load,
+            'btn_CNL': self.btn_CNL,
+            'btn_Save': self.btn_Save,
+            'btn_clean_CD': self.btn_clean_CD,
+            'btn_clean_CNL': self.btn_clean_CNL,
+            'btn_clean_Save': self.btn_clean_Save
+        }
     
     def grid_inner_widgets(self):
         self.label_head.grid(column=1, row=0, columnspan=2, sticky='w')

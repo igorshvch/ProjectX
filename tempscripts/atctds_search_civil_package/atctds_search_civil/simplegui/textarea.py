@@ -54,6 +54,10 @@ class TextArea(ttk.Frame, CommonInterface):
             command=self.cmd_clean_all,
             width=2
         )
+        self.widget_dict = {
+            'txt': self.txt,
+            'btn_clean_all': self.btn_clean_all
+        }
     
     def grid_inner_widgets(self):
         self.label_head.grid(column=0, row=0, sticky='we')

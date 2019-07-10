@@ -62,6 +62,10 @@ class ListView(ttk.Frame, CommonInterface):
             width=4,
             relief='sunken'
         )
+        self.widget_dict = {
+            'lstb': self.lstb,
+            'btn_clean_all': self.btn_clean_all
+        }
     
     def grid_inner_widgets(self):
         self.lb_scrl.grid(column=0, row=0, columnspan=3, sticky='we')
@@ -75,7 +79,7 @@ class ListView(ttk.Frame, CommonInterface):
 ############################### testing: ######################################
 ###############################################################################
 
-from .testtools import rd, gts
+from atctds_search_civil.testtools import rd, gts
 
 class ListViewTest(ListView):
     def __init__(self, parent, **kwargs):

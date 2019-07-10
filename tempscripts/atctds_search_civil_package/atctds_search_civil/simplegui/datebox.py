@@ -184,6 +184,12 @@ class DateBox(ttk.Frame, CommonInterface):
             width=4,
             relief='sunken'
         )
+        self.widget_dict = {
+            'cmb_Year': self.cmb_Year,
+            'cmb_Month': self.cmb_Month,
+            'cmb_Day': self.cmb_Day,
+            'btn_clean_all': self.btn_clean_all
+        }
     
     def grid_inner_widgets(self):
         self.label_head.grid(column=0, row=0, columnspan=4, sticky='we')

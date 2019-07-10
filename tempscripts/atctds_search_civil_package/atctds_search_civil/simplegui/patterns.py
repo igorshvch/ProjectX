@@ -3,6 +3,15 @@ from atctds_search_civil import debugger as dbg
 class CommonInterface():
     def __init__(self, tk_parent):
         self.tk_parent = tk_parent
+        self.widget_dict = {}
+        self.widget_flag = False
+    
+    def retrieve(self, key):
+        '''
+        Internal acting function providing interface to access
+        inner widgets of particluar tk.Frame subclass
+        '''
+        return self.widget_dict[key]
     
     @dbg.method_speaker('Empty method! For internal use only!')
     def load_external_data(self, data=None):
@@ -29,9 +38,11 @@ class CommonInterface():
     def start_widget(self):
         self.build_widgets()
         self.grid_inner_widgets()
+        self.widget_flag = True
     
     def start_widget_solo(self):
-        self.start_widget()
+        if not self.widget_flag:
+            self.start_widget()
         self.grid(column=0, row=0, sticky='nswe')
         self.tk_parent.update()
         self.tk_parent.minsize(

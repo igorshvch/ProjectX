@@ -70,6 +70,10 @@ class TreeView(ttk.Frame, CommonInterface):
                     command=self.tv.yview
                 )
         self.tv.configure(yscrollcommand=self.scroll.set)
+        self.widget_dict = {
+            'btn_1': self.btn_1,
+            'tv': self.tv
+        }
     
     def grid_inner_widgets(self):
         self.tv.grid(column=0, row=0, columnspan=2, sticky='we')
