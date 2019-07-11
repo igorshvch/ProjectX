@@ -6,10 +6,11 @@ class CommonInterface():
         self.widget_dict = {}
         self.widget_flag = False
     
-    def retrieve(self, key):
+    def re(self, key):
         '''
-        Internal acting function providing interface to access
-        inner widgets of particluar tk.Frame subclass
+        Internal acting function providing 'dict()'-like interface
+        to access and retrieve inner widgets of particluar
+        tk.Frame subclass
         '''
         return self.widget_dict[key]
     

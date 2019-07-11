@@ -344,7 +344,6 @@ class TextInfoCollector():
         key, pos = self.docs_poses[index]
         return self.readers[key].find_doc(pos)
     
-    @timer
     def process_files(self):
         dates_range = []
         f_paths = rwtools.collect_exist_files(self.folder, suffix='.txt')

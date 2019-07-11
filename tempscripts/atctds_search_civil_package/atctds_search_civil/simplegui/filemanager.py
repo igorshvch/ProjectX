@@ -20,6 +20,9 @@ class FileManager(ttk.Frame, CommonInterface):
         self.btn_CD = None #Court Desicions
         self.btn_CNL = None #Conclusions
         self.btn_Save = None
+        self.btn_clean_CD = None
+        self.btn_clean_CNL = None
+        self.btn_clean_Save = None
         self.label_Load = None
         self.label_CD = None #Court Desicions
         self.label_CNL = None #Conclusions
@@ -36,74 +39,120 @@ class FileManager(ttk.Frame, CommonInterface):
 
     @dbg.method_speaker('Cleaning FileManager widgets!')
     def cmd_clean_all(self):
-        btns = (
+        btns_disabling = (
+            self.btn_clean_all,
+            self.btn_clean_CD,
+            self.btn_clean_CNL,
+            self.btn_clean_Save
+        )
+        btns_normalizing = (
             self.btn_Load,
             self.btn_CD,
             self.btn_CNL,
-            self.btn_Save
+            self.btn_Save,
         )
         tk_string_vars = (
             self.l_CD_var,
             self.l_CNL_var,
             self.l_Save_var
         )
-        for btn in btns:
+        for btn in btns_normalizing:
             btn['state'] = 'normal'
+        for btn in btns_disabling:
+            btn['state'] = 'disabled'
         for tk_string_var in tk_string_vars:
             tk_string_var.set('')
     
     @dbg.method_speaker('Chose path to court desicions!')
     def cmd_CD(self): #Court Desicions
-        self.btn_Load['state'] = 'disabled'
         folder_path = fd.askdirectory(
             initialdir=Path().home().joinpath('Робот')
         )
+        if not folder_path:
+            return None
         if len(folder_path) >= 100:
             folder_path = '...'+folder_path[-93:]
         self.l_CD_var.set(folder_path)
+        self.btn_Load['state'] = 'disabled'
+        for btn in self.btn_clean_CD, self.btn_clean_all:
+            btn['state'] = 'normal'
         self.btn_CD['state'] = 'disabled'
 
     @dbg.method_speaker('Loading previously saved corpus data!')
     def cmd_Load(self):
-        self.btn_CD['state'] = 'disabled'
         folder_path = fd.askdirectory(
             initialdir=Path().home().joinpath('Робот', 'Предыдущие сеансы')
         )
+        if not folder_path:
+            return None
         if len(folder_path) >= 100:
             folder_path = '...'+folder_path[-93:]
         self.l_CD_var.set(folder_path)
+        self.btn_CD['state'] = 'disabled'
+        for btn in self.btn_clean_CD, self.btn_clean_all:
+            btn['state'] = 'normal'
         self.btn_Load['state'] = 'disabled'
     
     @dbg.method_speaker('Chose path to file with conclusions!')
     def cmd_CNL(self): #Conclusions
-        self.btn_CNL['state'] = 'disabled'
         file_path = fd.askopenfilename(
             initialdir=Path().home().joinpath('Робот')
         )
+        if not file_path:
+            return None
         if len(file_path) >= 100:
             file_path = '...'+file_path[-93:]
         self.l_CNL_var.set(file_path)
+        self.btn_CNL['state'] = 'disabled'
+        for btn in self.btn_clean_CNL, self.btn_clean_all:
+            btn['state'] = 'normal'
     
     @dbg.method_speaker('Chose path to results save folder!')
     def cmd_Save(self):
-        self.btn_Save['state'] = 'disabled'
         folder_path = fd.askdirectory(
             initialdir=Path().home().joinpath('Робот')
         )
+        if not folder_path:
+            return None
         if len(folder_path) >= 100:
             folder_path = '...'+folder_path[-93:]
         self.l_Save_var.set(folder_path)
+        self.btn_Save['state'] = 'disabled'
+        for btn in self.btn_clean_Save, self.btn_clean_all:
+            btn['state'] = 'normal'
     
     @dbg.method_speaker('Cleaning string var!')
     def cmd_clean(self, widget_var):
         options = {
-            'CD': (self.l_CD_var, (self.btn_CD, self.btn_Load)),
-            'CNL': (self.l_CNL_var, (self.btn_CNL,)),
-            'Save': (self.l_Save_var, (self.btn_Save,))
+            'CD': (
+                self.l_CD_var,
+                (self.btn_CD, self.btn_Load),
+                self.btn_clean_CD,
+                (self.l_CNL_var, self.l_Save_var)
+            ),
+            'CNL': (
+                self.l_CNL_var,
+                (self.btn_CNL,),
+                self.btn_clean_CNL,
+                (self.l_CD_var, self.l_Save_var)
+            ),
+            'Save': (
+                self.l_Save_var,
+                (self.btn_Save,),
+                self.btn_clean_Save,
+                (self.l_CD_var, self.l_CNL_var)
+            )
         }
         options[widget_var][0].set('')
         for btn in options[widget_var][1]:
             btn['state'] = 'normal'
+        options[widget_var][2]['state'] = 'disabled'
+        if (
+            not options[widget_var][3][0].get()
+            and
+            not options[widget_var][3][1].get()
+        ):
+            self.btn_clean_all['state'] = 'disabled'
 
     def build_widgets(self):
         self.label_head = ttk.Label( #Court Desicions
@@ -115,7 +164,8 @@ class FileManager(ttk.Frame, CommonInterface):
             self,
             text='Х',
             command=self.cmd_clean_all,
-            width=2
+            width=2,
+            state='disabled'
         )
         self.btn_CD = ttk.Button( #Court Desicions
             self,
@@ -131,13 +181,13 @@ class FileManager(ttk.Frame, CommonInterface):
         )
         self.btn_CNL = ttk.Button( #Conclusions
             self,
-            text='Путь к выводам (кирпичам)',
+            text='Файл с выводами (кирпичами)',
             command=self.cmd_CNL,
             width=42
         )
         self.btn_Save = ttk.Button(
             self,
-            text='Путь сохранения результатов',
+            text='Папка сохранения результатов',
             command=self.cmd_Save,
             width=42
         )
@@ -166,19 +216,22 @@ class FileManager(ttk.Frame, CommonInterface):
             self,
             text='X',
             command=lambda: self.cmd_clean('CD'),
-            width=2
+            width=2,
+            state='disabled'
         )
         self.btn_clean_CNL = ttk.Button(
             self,
             text='X',
             command=lambda: self.cmd_clean('CNL'),
-            width=2
+            width=2,
+            state='disabled'
         )
         self.btn_clean_Save = ttk.Button(
             self,
             text='X',
             command=lambda: self.cmd_clean('Save'),
-            width=2
+            width=2,
+            state='disabled'
         )
         self.widget_dict = {
             'btn_clean_all': self.btn_clean_all,
@@ -188,7 +241,10 @@ class FileManager(ttk.Frame, CommonInterface):
             'btn_Save': self.btn_Save,
             'btn_clean_CD': self.btn_clean_CD,
             'btn_clean_CNL': self.btn_clean_CNL,
-            'btn_clean_Save': self.btn_clean_Save
+            'btn_clean_Save': self.btn_clean_Save,
+            'l_CD_var': self.l_CD_var,
+            'l_CNL_var': self.l_CNL_var,
+            'l_Save_var': self.l_Save_var
         }
     
     def grid_inner_widgets(self):

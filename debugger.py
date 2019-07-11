@@ -86,3 +86,5 @@ def method_speaker(stmt=''):
             return func(*args, **kwargs)
         return wrapper
     return decorator
+
+messanger = lambda x: strftime('%Y-%m-%d, %a, %H:%M:%S') + '\t' + x

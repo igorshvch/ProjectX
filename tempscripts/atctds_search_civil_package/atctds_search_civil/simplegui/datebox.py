@@ -48,6 +48,7 @@ class DateBox(ttk.Frame, CommonInterface):
 
     def count_days_in_month(self):
         self.cmb_Day['state'] = 'readonly'
+        self.btn_clean_all['state'] = 'normal'
         year = int(self.cmb_Year.get())
         month = self.cmb_Month.current() + 1
         days_in_month = calendar.monthrange(year, month)[1]
@@ -103,7 +104,8 @@ class DateBox(ttk.Frame, CommonInterface):
             cmb.selection_clear()
             cmb.set('')
             l_var.set('')
-        self.cmb_Day['state'] = 'disabled'
+        for widget in self.cmb_Day, self.btn_clean_all:
+            widget['state'] = 'disabled'
 
     def build_widgets(self):
         #header and hint widgets:
@@ -144,7 +146,7 @@ class DateBox(ttk.Frame, CommonInterface):
             self,
             values=self.months,
             width=15,
-            state='normal'
+            state='disabled'
         )
         self.cmb_Month.bind('<<ComboboxSelected>>', self.process_month)
 
@@ -161,7 +163,8 @@ class DateBox(ttk.Frame, CommonInterface):
             self,
             text='Х',
             command=self.cmd_clean_all,
-            width=2
+            width=2,
+            state='disabled'
         )
         self.label_inf_Day = ttk.Label(
             self,
@@ -231,8 +234,9 @@ class DateBoxTest(DateBox):
     def start_widget(self):
         self.build_widgets()
         self.cmb_Year['values'] = ('2017', '2018', '2019')
-        for cmb in self.cmb_Month, self.cmb_Year:
+        for cmb in self.cmb_Year, self.cmb_Month, self.cmb_Day:
             cmb['state'] = 'readonly'
+        self.btn_clean_all['state'] = 'normal'
         self.label_head.bind('<Control-Button-1>', lambda x: self.clear_all())
         self.label_head.bind(
             '<Control-Button-3>',

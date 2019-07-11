@@ -47,7 +47,8 @@ class ListView(ttk.Frame, CommonInterface):
             self,
             text='X',
             command=self.cmd_clean_all,
-            width=2
+            width=2,
+            state='disabled'
         )
         self.label_count1 = ttk.Label(
             self,
@@ -99,6 +100,7 @@ class ListViewTest(ListView):
     
     def start_widget(self):
         self.build_widgets()
+        self.btn_clean_all['state'] = 'normal'
         self.lstb.bind('<Double-1>', lambda x: self.insert_data())
         self.lstb.bind('<Double-3>', lambda x: self.erase_data())
         self.grid_inner_widgets()

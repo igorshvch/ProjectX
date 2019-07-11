@@ -52,7 +52,8 @@ class TextArea(ttk.Frame, CommonInterface):
             self,
             text='X',
             command=self.cmd_clean_all,
-            width=2
+            width=2,
+            state='disabled'
         )
         self.widget_dict = {
             'txt': self.txt,
@@ -69,7 +70,7 @@ class TextArea(ttk.Frame, CommonInterface):
 ############################### testing: ######################################
 ###############################################################################
 
-from .testtools import rd, gts
+from atctds_search_civil.testtools import rd, gts
 
 class TextAreaTest(TextArea):
     def __init__(self, parent, **kwargs):
@@ -83,6 +84,8 @@ class TextAreaTest(TextArea):
 
     def start_widget(self):
         self.build_widgets()
+        self.txt['state'] = 'normal'
+        self.btn_clean_all['state'] = 'normal'
         self.txt.bind('<Double-2>', lambda x: self.insert_data())
         self.grid_inner_widgets()
     
