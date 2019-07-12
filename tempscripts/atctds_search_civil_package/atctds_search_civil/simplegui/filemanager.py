@@ -63,6 +63,26 @@ class FileManager(ttk.Frame, CommonInterface):
         for tk_string_var in tk_string_vars:
             tk_string_var.set('')
     
+    @dbg.method_speaker('Chose path to court desicions or to previously saved corpus data!')
+    def cmd_CD_or_Load(self, widget_var):
+        opritons = {
+            'CD': ('Робот',),
+            'Load': ('Робот', 'Предыдущие сеансы'),
+        }
+        folder_path = fd.askdirectory(
+            initialdir=Path().home().joinpath(*opritons[widget_var])
+        )
+        if not folder_path:
+            return None
+        if len(folder_path) >= 100:
+            folder_path = '...'+folder_path[-93:]
+        self.l_CD_var.set(folder_path)
+        self.btn_CD['state'] = 'disabled'
+        self.btn_Load['state'] = 'disabled'
+        for btn in self.btn_clean_CD, self.btn_clean_all:
+            btn['state'] = 'normal'
+
+#################legacy code starts:    
     @dbg.method_speaker('Chose path to court desicions!')
     def cmd_CD(self): #Court Desicions
         folder_path = fd.askdirectory(
@@ -73,10 +93,10 @@ class FileManager(ttk.Frame, CommonInterface):
         if len(folder_path) >= 100:
             folder_path = '...'+folder_path[-93:]
         self.l_CD_var.set(folder_path)
+        self.btn_CD['state'] = 'disabled'
         self.btn_Load['state'] = 'disabled'
         for btn in self.btn_clean_CD, self.btn_clean_all:
             btn['state'] = 'normal'
-        self.btn_CD['state'] = 'disabled'
 
     @dbg.method_speaker('Loading previously saved corpus data!')
     def cmd_Load(self):
@@ -89,10 +109,11 @@ class FileManager(ttk.Frame, CommonInterface):
             folder_path = '...'+folder_path[-93:]
         self.l_CD_var.set(folder_path)
         self.btn_CD['state'] = 'disabled'
+        self.btn_Load['state'] = 'disabled'
         for btn in self.btn_clean_CD, self.btn_clean_all:
             btn['state'] = 'normal'
-        self.btn_Load['state'] = 'disabled'
-    
+#################legacy code ends
+
     @dbg.method_speaker('Chose path to file with conclusions!')
     def cmd_CNL(self): #Conclusions
         file_path = fd.askopenfilename(
@@ -170,18 +191,19 @@ class FileManager(ttk.Frame, CommonInterface):
         self.btn_CD = ttk.Button( #Court Desicions
             self,
             text='Новые суд.акты',
-            command=self.cmd_CD,
+            command= lambda: self.cmd_CD_or_Load('CD'),
             width=17
         )
         self.btn_Load = ttk.Button(
             self,
             text='Загрузить обработанные',
-            command=self.cmd_Load,
-            width=23
+            command= lambda: self.cmd_CD_or_Load('Load'),
+            width=23,
+            state='disabled'
         )
         self.btn_CNL = ttk.Button( #Conclusions
             self,
-            text='Файл с выводами (кирпичами)',
+            text='Файл с выводами и аннотациями',
             command=self.cmd_CNL,
             width=42
         )
@@ -250,8 +272,8 @@ class FileManager(ttk.Frame, CommonInterface):
     def grid_inner_widgets(self):
         self.label_head.grid(column=1, row=0, columnspan=2, sticky='w')
         self.btn_clean_all.grid(column=0, row=1, rowspan=3, sticky='ns')
-        self.btn_CD.grid(column=1, row=1, sticky='we')
-        self.btn_Load.grid(column=2, row=1, sticky='we')
+        self.btn_CD.grid(column=1, row=1, columnspan=2, sticky='we')
+        #self.btn_Load.grid(column=2, row=1, sticky='we')
         self.btn_CNL.grid(column=1, row=2, columnspan=2, sticky='we')
         self.btn_Save.grid(column=1, row=3, columnspan=2, sticky='we')
 

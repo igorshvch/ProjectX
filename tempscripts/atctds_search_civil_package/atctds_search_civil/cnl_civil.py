@@ -312,6 +312,12 @@ class ContentsBoxCollector():
         self.store = {}
         self.__process(file_paths_iterable)
     
+    def __len__(self):
+        total = 0
+        for key in self.store:
+            total += len(self.store[key])
+        return total
+
     def __getitem__(self, index):
         pass
     
@@ -355,6 +361,9 @@ class QuestCleaner():
         self.data = None
         self._transform()
     
+    def __len__(self):
+        return len(self.data)
+
     def __iter__(self):
         if self.data:
             for key in self.data:
@@ -363,19 +372,23 @@ class QuestCleaner():
             raise StopIteration('Data attribute is empty!')
 
     
-    def _transform(self):
+    def _transform(self, verbose=False):
         data = {}
         split_level_1 = self.raw_text.split('\n')
         for ind, question in enumerate(split_level_1):
             try:
                 first_char = question[0]
-                print(ind)
+                if verbose:
+                    print(ind)
             except IndexError:
-                print(ind, 'FAIL')
+                if verbose:
+                    print(ind, 'FAIL')
                 continue
             if isinstance(first_char, int) or isinstance(first_char, str):
                 split_level_2 = question.split('\t')
-                if split_level_2[0] in data:
+                if split_level_2[0] in data and split_level_2[0] == '':
+                    continue
+                elif split_level_2[0] in data:
                     raise KeyError(
                         'Question ia alreqdy in the dictionary!', 
                         split_level_2[0]
@@ -407,8 +420,7 @@ def join_contents_and_questions(QC, CBC):
         question, anns = item
         contents_gen = CBC.find_by_quest(question)
         for ind, contents_item in enumerate(contents_gen):
-            listed_item = list(contents_item)
-            listed_item.append(anns[ind])
-            listed_item = [str(i) for i in listed_item]
-            print(' >>> '.join(listed_item))
-            print('\n')
+            listed_items = list(contents_item)
+            listed_items.append(anns[ind])
+            listed_items = [str(i) for i in listed_items[1:]]
+            yield ' '.join(listed_items)

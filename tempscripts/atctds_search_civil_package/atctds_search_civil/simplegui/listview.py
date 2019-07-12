@@ -21,11 +21,12 @@ class ListView(ttk.Frame, CommonInterface):
     def cmd_clean_all(self):
         self.lstb_var.set('')
         self.l_count_var.set('')
+        self.btn_clean_all['state'] = 'disabled'
 
     def build_widgets(self):
         self.lb_scrl = ttk.Label(
             self,
-            text='Список выводов (кирпичей)',
+            text='Список кирпичей (выводов или позиций)',
             anchor='center',
             width=30,
             relief='flat'
@@ -52,7 +53,7 @@ class ListView(ttk.Frame, CommonInterface):
         )
         self.label_count1 = ttk.Label(
             self,
-            text='Всего выводов:',
+            text='Всего кирпичей (выводов или позций):',
             anchor='e',
             relief='flat'
         )

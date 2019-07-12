@@ -4,24 +4,36 @@ import pathlib
 
 import gensim as gsm
 
-from . import iotext as iot
-from . import iopickler as iop
-from .textproc import PARSER
-from .guidialogs import ffp, fdp
-from .debugger import timer_with_func_name
+from atctds_search_civil import (
+    tokenizer as tok,
+    iopickler as iop,
+    debugger as dbg
+)
+from atctds_search_civil.textproc import rwtools, PARSER
 
 logging.basicConfig(
     format='{asctime} : {levelname} : {message}',
     style='{', level=logging.INFO
 )
 
+
+
+
+
+
+
+
+
+
+from atctds_search_civil.guidialogs import ffp, fdp
+from atctds_search_civil.debugger import timer_with_func_name
+
+
 def define_globs():
     global WORK_DIRECTORY
     global TODAY
     WORK_DIRECTORY = pathlib.Path(fdp())
     TODAY = time.strftime('%Y-%m-%d')
-
-define_globs()
 
 #Preliminaries
 #   corpus_iterator - 'iot.MyReaderPre'/'iot.MyReaderEndDate'
@@ -60,18 +72,18 @@ def create_dct(corpus_iterator,
     Create gensim.corpora.Dictionary object and iot.MyReaderPre object
     '''
     if mode == 'tok':
-        tknz = iot.Tokenizer(corpus_iterator, stpw)
+        tknz = tok.Tokenizer(corpus_iterator, stpw)
     elif mode == 'lem':
-        tknz = iot.TokenizerLem(corpus_iterator, stpw, lem_map=lem_map)
+        tknz = tok.TokenizerLem(corpus_iterator, stpw, lem_map=lem_map)
     elif mode == 'bgr':
-        tknz = iot.TokenizerLemBigr(
+        tknz = tok.TokenizerLemBigr(
             corpus_iterator,
              stpw,
              word_len=word_len,
              lem_map=lem_map
         )
     elif mode == 'tgr':
-        tknz = iot.TokenizerLemTrigr(
+        tknz = tok.TokenizerLemTrigr(
             corpus_iterator,
             stpw,
             word_len=word_len,
@@ -509,7 +521,7 @@ def create_inverted_index(corpus_iterator, stpw):
     Unefficient function for creating inverted index table
     '''
     iid = {}
-    tknz = iot.Tokenizer(corpus_iterator, stpw)
+    tknz = tok.Tokenizer(corpus_iterator, stpw)
     for ind, tokens_doc in enumerate(tknz):
         if ind % 10000 == 0:
             print(ind)
