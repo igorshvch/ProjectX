@@ -13,7 +13,8 @@ class ControlButtons(ttk.Frame, CommonInterface):
     
     @dbg.method_speaker()
     def cmd_clean_all(self):
-        return None
+        for btn in self.btn_Start, self.btn_clean_all:
+            btn['state'] = 'normal'
     
     @dbg.method_speaker('Cleaning all programm data for new iteration')
     def cmd_Start(self):

@@ -12,6 +12,7 @@ class TextArea(ttk.Frame, CommonInterface):
         self.txt = None # tk.Text
         self.scrl = None # ttk.Scrollbar
         self.btn_clean_all = None
+        self.prog_bar = None # ttk.Progressbar
     
     @dbg.method_speaker('Cleaning TextArea widgets!')
     def cmd_clean_all(self):
@@ -55,16 +56,24 @@ class TextArea(ttk.Frame, CommonInterface):
             width=2,
             state='disabled'
         )
+        self.prog_bar = ttk.Progressbar(
+            self,
+            orient='horizontal',
+            length=200,
+            mode='indeterminate'
+        )
         self.widget_dict = {
             'txt': self.txt,
-            'btn_clean_all': self.btn_clean_all
+            'btn_clean_all': self.btn_clean_all,
+            'progbar': self.prog_bar,
         }
     
     def grid_inner_widgets(self):
-        self.label_head.grid(column=0, row=0, sticky='we')
-        self.txt.grid(column=0, row=1, sticky='nwse')
-        self.scrl.grid(column=1, row=1, sticky='nws')
+        self.label_head.grid(column=0, row=0, columnspan=2, sticky='we')
+        self.txt.grid(column=0, row=1, columnspan=2, sticky='nwse')
+        self.scrl.grid(column=2, row=1, sticky='nws')
         self.btn_clean_all.grid(column=0, row=2, sticky='w')
+        self.prog_bar.grid(column=1, row=2, sticky='e')
 
 ###############################################################################
 ############################### testing: ######################################

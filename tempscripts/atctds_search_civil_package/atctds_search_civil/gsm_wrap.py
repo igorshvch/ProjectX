@@ -16,14 +16,90 @@ logging.basicConfig(
     style='{', level=logging.INFO
 )
 
+def pipeline_bgr(corpus_iterator,
+                stpw,
+                no_below,
+                no_above,
+                num_best=15,
+                lem_map=None,
+                prune_at=3000000):
+    print(dbg.messanger('Start word normalization!'))
+    tknz = tok.TokenizerLemBigr(
+        corpus_iterator, stpw, lem_map=lem_map
+    )
+    print(dbg.messanger('Start dictionary creation!'))
+    dct = gsm.corpora.Dictionary(tknz, prune_at=prune_at)
+    stpw_ids = dct.doc2idx(stpw)
+    dct.filter_tokens(bad_ids=stpw_ids)
+    dct.filter_extremes(no_below=no_below, no_above=no_above, keep_n=None)
+    dct.compactify()
+    #dct.doc2bow(doc) for doc in tokenizer - transform doc to bow repr
+    #gsm.models.TfidfModel(<iterator over bow repr of docs>) - transform bow_doc to tfidf_doc
+    print(dbg.messanger('Start similarity object creation!'))
+    dct_tfidf = gsm.models.TfidfModel(dct.doc2bow(doc) for doc in tknz)
+    similarity_obj = gsm.similarities.Similarity(
+        None,
+        (dct_tfidf[doc] for doc in (dct.doc2bow(doc) for doc in tknz)),
+        num_features=len(dct),
+        num_best=num_best
+    )
+    return dct, dct_tfidf, similarity_obj
+
+def form_output(corpus_iterator,
+                dct,
+                dct_tfidf,
+                similarity_obj,
+                QueryProcessor_obj):
+    '''
+    Returns:
+    [
+        (6727, 0.3714553117752075, 'bgrlemtok'),
+        (7563, 0.3039359599351883, 'lemtok'),
+        ...        
+    ]
+    '''   
+    holder = []
+    query = QueryProcessor_obj.bigrams
+    res = similarity_obj[dct_tfidf[dct.doc2bow(query)]]
+    for item in res:
+        index, _ = item
+        act = corpus_iterator[index].split('\n')
+        holder.append(act[0].strip('\n\r') + ' ' + act[3].strip('\n\r'))
+    return holder
+
+class QueryProcessor():
+    def __init__(self, query, stpw, word_len=1):
+        self.query = query
+        self.tokens = None
+        self.lemmas = None
+        self.bigrams = None
+        self.tokenize(stpw)
+        self.lemmatize()
+        self.create_bigrams(word_len=word_len)
+    
+    def tokenize(self, stpw):
+        self.tokens = [
+            word.strip('!"#$%&\'()*+,./:;<=>?@[\\]^_`{|}~')
+            for word in self.query.lower().split(' ')
+            if word not in stpw
+        ]
+    
+    def lemmatize(self):
+        self.lemmas = [PARSER(word) for word in self.tokens]
+    
+    def create_bigrams(self, word_len=1):
+        query = [
+            word for word in self.lemmas if len(word)>word_len
+        ]
+        self.bigrams = [
+            query[i-1]+'#'+query[i]
+            for i in range(1, len(query), 1)
+        ]
 
 
-
-
-
-
-
-
+###############################################################################
+###############################################################################
+###############################################################################
 
 from atctds_search_civil.guidialogs import ffp, fdp
 from atctds_search_civil.debugger import timer_with_func_name
@@ -324,7 +400,7 @@ def create_one_model(corpus_iterator, stpw, pars, num_best=15, mode='bgr', word_
     )
     return dct
 
-class QueryProcessor():
+class QueryProcessorOld():
     def __init__(self, query_full, query_short, stpw, word_len=1):
         self.query = {'raw': query_full}
         self.query_short = {'raw': query_short}

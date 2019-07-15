@@ -190,7 +190,7 @@ class FileManager(ttk.Frame, CommonInterface):
         )
         self.btn_CD = ttk.Button( #Court Desicions
             self,
-            text='Новые суд.акты',
+            text='Новые судебные акты',
             command= lambda: self.cmd_CD_or_Load('CD'),
             width=17
         )

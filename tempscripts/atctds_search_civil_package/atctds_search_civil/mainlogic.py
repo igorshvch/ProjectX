@@ -11,24 +11,34 @@ from atctds_search_civil import (
     cnl_civil as cnl,
 )
 from atctds_search_civil.textproc import rwtools
+from atctds_search_civil.gsm_wrap import (
+    pipeline_bgr, form_output, QueryProcessor
+)
 
 MESSAGES = {
+    'start_mes': '>>> Здравствуйте! Вы начали новый сеанс!',
     'fm_dir': 'Выбрана папка с файлами: {}',
     'fm_file': 'Выбран файл: {}',
     'fm_error': 'ВНИМАНИЕ! Ошибка в указании пути',
     'fm_save': 'Выбрана папка для сохранения: {}',
-    'corpus_proc': '>>> Обрабатываю корпус документов',
+    'corpus_proc': '>>> Индексирую корпус документов',
     'corpus_res': 'Корпус обработан. Документов всего: {}',
     'sel_date': 'Дата загрузки в СПС "КонсультантПлюс", начиная с которой будут подобраны судебные акты: {}',
     'contents_proc': '>>> Загружаю оглавления ПСП',
-    'contents_total': 'Всего кирпичей (выводов или позиций) в ткущей версии оглавлений ПСП: {}',
+    'contents_total': 'Всего кирпичей (выводов или позиций) в текущей версии оглавлений ПСП: {}',
     'concls_load': 'Загружено выводов: {}',
-    'concls_found': 'Найдено кирпичей (выводов или позиций) в ткущей версии оглавлений ПСП: {}',
+    'concls_found': 'Найдено кирпичей (выводов или позиций) в текущей версии оглавлений ПСП: {}',
+    'anlz_start': '>>> Обрабатываю корпус документов',
+    'anlz_first_step': '>>> Ищу похожие документы',
+    'new_session': '>>> Вы начали новый сеанс!',
 }
 
 INTERNAL_PATHS = {
     'contents': pthl.Path().home().joinpath(
         'Робот', '_Работа программы', 'Оглавление ПСП'
+    ),
+    'stpw': pthl.Path().home().joinpath(
+        'Робот', '_Работа программы', 'Стоп-слова', 'custom_stpw_wo_objections'
     ),
 }
 
@@ -40,13 +50,37 @@ class MainLogic(smg.MainFrame):
         smg.MainFrame.__init__(self, parent)
         self.corpus_iterator = None
         self.concls = None
+        self.date = None
+        self.paths_to_corpus_and_concls = {key:None for key in ('CD', 'CNL')}
         self.save_res_folder = None
         self.start_widget()
         self.buttons_to_actions()
+        self.print_in(MESSAGES['start_mes'])
+        self.check_start_button_state()
+        self.check_new_session_button_state()
     
     def print_in(self, text):
         self.widgets['TextArea'].btn_clean_all['state'] = 'normal'
         self.widgets['TextArea'].print_in(dbg.messanger(text))
+    
+    def check_start_button_state(self):
+        if self.concls and self.corpus_iterator and self.date:
+            self.widgets['ControlButtons'].btn_Start['state'] = 'normal'
+        else:
+            self.widgets['ControlButtons'].btn_Start['state'] = 'disabled'
+        self.after(100, self.check_start_button_state)
+    
+    def check_new_session_button_state(self):
+        if (
+            self.paths_to_corpus_and_concls['CD']
+            or self.paths_to_corpus_and_concls['CNL']
+            or self.save_res_folder
+        ):
+            self.widgets['ControlButtons'].btn_clean_all['state'] = 'normal'
+        else:
+            self.widgets['ControlButtons'].btn_clean_all['state'] = 'disabled'
+        self.after(100, self.check_new_session_button_state)
+            
     
     def fill_in_DateBox_with_actual_years(self):
         min_year = self.corpus_iterator.dates_range[0].year
@@ -60,8 +94,11 @@ class MainLogic(smg.MainFrame):
             str(year) for year in range(min_year, max_year+1, 1)
         ]
 
+
+#################Start of subthreads or subprocesses part:
     @dbg.method_speaker_timer('Corpus evaluation!')
     def process_corpus(self, folder_path):
+        self.widgets['TextArea'].prog_bar.start()
         with LOCK:
             self.print_in(MESSAGES['corpus_proc'])
         self.widgets['FileManager'].btn_clean_CD['state'] = 'disabled'
@@ -74,9 +111,11 @@ class MainLogic(smg.MainFrame):
         self.widgets['FileManager'].btn_clean_CD['state'] = 'normal'
         self.widgets['FileManager'].btn_clean_all['state'] = 'normal'
         self.fill_in_DateBox_with_actual_years()
+        self.widgets['TextArea'].prog_bar.stop()
     
     @dbg.method_speaker_timer('Conclusions evaluation!')
     def process_concls(self, file_path):
+        self.widgets['TextArea'].prog_bar.start()
         with LOCK:
             self.print_in(MESSAGES['contents_proc'])
         iterable_paths = rwtools.collect_exist_files(
@@ -96,7 +135,28 @@ class MainLogic(smg.MainFrame):
         self.widgets['ListView'].l_count_var.set(str(len(self.concls)))
         self.widgets['ListView'].lstb_var.set(self.concls)
         self.widgets['ListView'].btn_clean_all['state'] = 'normal'
+        self.widgets['TextArea'].prog_bar.stop()
     
+    @dbg.method_speaker_timer('Start gensim pipeline!')
+    def staprt_pipline(self, corpus_iterator, concls, date, save_res_folder):
+        self.widgets['TextArea'].prog_bar.start()
+        stpw = rwtools.load_pickle(INTERNAL_PATHS['stpw'])
+        with LOCK:
+            self.print_in(MESSAGES['anlz_first_step'])
+        dct, dct_tfidf, sim_obj = pipeline_bgr(
+            corpus_iterator, stpw, 1, 0.85, num_best=15
+        )
+        for concl in concls:
+            print(concl)
+            query = QueryProcessor(concl, stpw)
+            for item in form_output(
+                corpus_iterator,dct, dct_tfidf, sim_obj, query
+            ):
+                print('\t\t', item)
+        self.widgets['TextArea'].prog_bar.stop()
+#################End of subthreads or subprocesses part
+
+
     @dbg.method_speaker('Catch FileManager.btn_CD or .btn_CNL press!')
     def filemanager_btn_CD_or_CNL_press(self, widget_var):
         optitons = {
@@ -120,6 +180,7 @@ class MainLogic(smg.MainFrame):
             self.print_in(MESSAGES[mes].format(path))
             worker = thrd.Thread(target=func, args=(path,))
             worker.start()
+            self.paths_to_corpus_and_concls[widget_var] = path
         else:
             self.print_in(MESSAGES['fm_error'])
 
@@ -189,6 +250,41 @@ class MainLogic(smg.MainFrame):
     def clean_ListView_and_FileManager_CNL(self):
         self.widgets['ListView'].cmd_clean_all()
         self.widgets['FileManager'].cmd_clean('CNL')
+    
+    @dbg.method_speaker('Catch DateBox cmb_Day selection!')
+    def retrieve_date(self):
+        self.widgets['DateBox'].process_day(None) #None is a filler for tk.event argument holder in datebox.py DateBox method
+        date = self.widgets['DateBox'].extract_internal_data()
+        self.print_in(MESSAGES['sel_date'].format(date))
+        self.date = date
+    
+    @dbg.method_speaker('Catch ControlButtons.btn_Start press!')
+    def start_analyzis(self):
+        self.print_in(MESSAGES['anlz_start'])
+        corpus_iterator = self.corpus_iterator
+        concls = self.concls
+        date = self.date
+        save_res_folder = self.save_res_folder
+        self.corpus_iterator = None
+        self.concls = None
+        self.date = None
+        worker = thrd.Thread(
+            target=self.staprt_pipline,
+            args=(corpus_iterator, concls, date, save_res_folder)
+        )
+        worker.start()
+    
+    @dbg.method_speaker('Catch ControlButtons.btn_clean_all press!')
+    def clean_everything(self):
+        self.clean_DateBox_and_ListView_when_reset_path_to_CD('clean_all')
+        self.widgets['TextArea'].cmd_clean_all()
+        self.widgets['ControlButtons'].cmd_clean_all()
+        self.corpus_iterator = None
+        self.concls = None
+        self.date = None
+        self.paths_to_corpus_and_concls = {key:None for key in ('CD', 'CNL')}
+        self.save_res_folder = None
+        self.print_in(MESSAGES['new_session'])
 
     @dbg.method_speaker('Changing buttons-to-actions mapping!')
     def buttons_to_actions(self):
@@ -208,6 +304,9 @@ class MainLogic(smg.MainFrame):
                 )
             )
         )
+        self.widgets['FileManager'].btn_clean_CNL['command'] = (
+            self.clean_ListView_and_FileManager_CNL
+        )
         self.widgets['FileManager'].btn_clean_all['command'] = (
             lambda: (
                 self.clean_DateBox_and_ListView_when_reset_path_to_CD(
@@ -220,19 +319,17 @@ class MainLogic(smg.MainFrame):
         )
         self.widgets['DateBox'].cmb_Day.bind(
             '<<ComboboxSelected>>',
-            lambda x: (
-                self.widgets['DateBox'].process_day(None), #None is a filler for tk.event argument holder in datebox.py DateBox method
-                self.print_in(
-                    MESSAGES['sel_date'].format(
-                        self.widgets['DateBox'].extract_internal_data()
-                    )
-                )
-            )
+            lambda x: self.retrieve_date()
         )
         self.widgets['ListView'].btn_clean_all['command'] = (
             self.clean_ListView_and_FileManager_CNL
         )
-    
+        self.widgets['ControlButtons'].btn_Start['command'] = (
+            self.start_analyzis
+        )
+        self.widgets['ControlButtons'].btn_clean_all['command'] = (
+            self.clean_everything
+        )
 
 
 if __name__ == '__main__':
