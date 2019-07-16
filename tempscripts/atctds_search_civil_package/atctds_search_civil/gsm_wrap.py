@@ -62,9 +62,9 @@ def form_output(corpus_iterator,
     query = QueryProcessor_obj.bigrams
     res = similarity_obj[dct_tfidf[dct.doc2bow(query)]]
     for item in res:
-        index, _ = item
+        index, scr = item
         act = corpus_iterator[index].split('\n')
-        holder.append(act[0].strip('\n\r') + ' ' + act[3].strip('\n\r'))
+        holder.append([act[0].strip('\n\r') + ' ' + act[3].strip('\n\r'), scr])
     return holder
 
 class QueryProcessor():

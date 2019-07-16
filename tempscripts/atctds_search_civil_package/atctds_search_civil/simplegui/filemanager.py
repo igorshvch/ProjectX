@@ -74,9 +74,9 @@ class FileManager(ttk.Frame, CommonInterface):
         )
         if not folder_path:
             return None
+        self.l_CD_var.set(folder_path)
         if len(folder_path) >= 100:
             folder_path = '...'+folder_path[-93:]
-        self.l_CD_var.set(folder_path)
         self.btn_CD['state'] = 'disabled'
         self.btn_Load['state'] = 'disabled'
         for btn in self.btn_clean_CD, self.btn_clean_all:
@@ -90,9 +90,9 @@ class FileManager(ttk.Frame, CommonInterface):
         )
         if not folder_path:
             return None
+        self.l_CD_var.set(folder_path)
         if len(folder_path) >= 100:
             folder_path = '...'+folder_path[-93:]
-        self.l_CD_var.set(folder_path)
         self.btn_CD['state'] = 'disabled'
         self.btn_Load['state'] = 'disabled'
         for btn in self.btn_clean_CD, self.btn_clean_all:
@@ -105,9 +105,9 @@ class FileManager(ttk.Frame, CommonInterface):
         )
         if not folder_path:
             return None
+        self.l_CD_var.set(folder_path)
         if len(folder_path) >= 100:
             folder_path = '...'+folder_path[-93:]
-        self.l_CD_var.set(folder_path)
         self.btn_CD['state'] = 'disabled'
         self.btn_Load['state'] = 'disabled'
         for btn in self.btn_clean_CD, self.btn_clean_all:
@@ -121,8 +121,6 @@ class FileManager(ttk.Frame, CommonInterface):
         )
         if not file_path:
             return None
-        if len(file_path) >= 100:
-            file_path = '...'+file_path[-93:]
         self.l_CNL_var.set(file_path)
         self.btn_CNL['state'] = 'disabled'
         for btn in self.btn_clean_CNL, self.btn_clean_all:
@@ -135,8 +133,6 @@ class FileManager(ttk.Frame, CommonInterface):
         )
         if not folder_path:
             return None
-        if len(folder_path) >= 100:
-            folder_path = '...'+folder_path[-93:]
         self.l_Save_var.set(folder_path)
         self.btn_Save['state'] = 'disabled'
         for btn in self.btn_clean_Save, self.btn_clean_all:

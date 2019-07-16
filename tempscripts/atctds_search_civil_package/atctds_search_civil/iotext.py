@@ -72,9 +72,11 @@ class MyReaderEndDate(MyReader):
         #store dates positions by date {date : [pos1, pos2]}
         #for code analysis puprose
         self.dates_to_poses = {}
-        #store docs positions by date {date: [(p1s, p1e), (p2s, p2e)]}
-        self.dates_to_docs = {}
         self.dates_poses = []
+        #store docs positions by date {date: [ind1, ind2, ...]}
+        self.dates_to_docs = {}
+        #Inhereted attribute: self.docs_poses
+        #it stores docs positions: [(p1s, p1e), (p2s, p2e), ...]
 
     def find_docs(self,
                   pattern_date=r'Когда получен[\n\r]{1,2}',
@@ -100,7 +102,9 @@ class MyReaderEndDate(MyReader):
                 continue
             elif re.match(pattern_doc_end, line):
                 end_pos = current_position
-                self.dates_to_docs.setdefault(d, []).append((start_pos, end_pos))
+                self.dates_to_docs.setdefault(d, []).append(
+                    len(self.docs_poses)
+                )
                 self.docs_poses.append((start_pos, end_pos))
             if last_position == current_position:
                 break
@@ -123,18 +127,27 @@ class MyReaderEndDate(MyReader):
         d = date(year, month, day)
         if d not in self.dates_to_docs:
             yield ''
-        doc_poses = self.dates_to_docs[d]
+        doc_poses = self.docs_poses
+        doc_indices = self.dates_to_docs[d]
         print(
-            'There are {: >3d}'.format(len(doc_poses)),
+            'There are {: >3d}'.format(len(doc_indices)),
             'documents by date {}'.format(str(d))
         )
         buffer = self.file.buffer
-        for pose in doc_poses:
-            start, stop = pose
+        for index in doc_indices:
+            start, stop = doc_poses[index]
             buffer.seek(start)
             doc_b = buffer.read(stop-start)
             text = doc_b.decode(codec)[2:-74]
             yield text
+    
+    def find_docs_after_date(self, date_obj):
+        doc_indices = []
+        for key_date in sorted(self.dates_to_docs.keys()):
+            if date_obj <= key_date:
+                doc_indices += self.dates_to_docs[key_date]
+        for index in doc_indices:
+            yield self.find_doc(index) 
     
     def print_stats(self):
         print('-'*22)
@@ -326,7 +339,7 @@ class MyReader_testing(MyReaderGroups):
                         holder.append((ind, self.patterns[key]))
         return holder
 
-class TextInfoCollector():
+class TextInfoCollectorEndDate():
     def __init__(self, folder):
         self.folder = folder
         self.readers = {}
@@ -370,9 +383,9 @@ class TextInfoCollector():
         self.dates_range.append(minimum)
         self.dates_range.append(maximum)
     
-    def find_docs_by_date(self, year, month, day):
+    def find_docs_after_date(self, date_obj):
         for key in sorted(self.readers.keys()):
-            yield from self.readers[key].find_docs_by_date(year, month, day)
+            yield from self.readers[key].find_docs_after_date(date_obj)
 
 class TextInfoCollectorGropus():
     def __init__(self, folder, path_to_patterns):

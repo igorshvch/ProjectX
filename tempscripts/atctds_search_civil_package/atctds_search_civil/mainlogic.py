@@ -23,13 +23,15 @@ MESSAGES = {
     'fm_save': 'Выбрана папка для сохранения: {}',
     'corpus_proc': '>>> Индексирую корпус документов',
     'corpus_res': 'Корпус обработан. Документов всего: {}',
-    'sel_date': 'Дата загрузки в СПС "КонсультантПлюс", начиная с которой будут подобраны судебные акты: {}',
+    'date_sel': 'Дата загрузки в СПС "КонсультантПлюс", начиная с которой будут подобраны судебные акты: {}',
+    'date_error': 'Выбранная дата находится за пределами доступного диапазона. Последняя доступная дата: {}',
     'contents_proc': '>>> Загружаю оглавления ПСП',
     'contents_total': 'Всего кирпичей (выводов или позиций) в текущей версии оглавлений ПСП: {}',
     'concls_load': 'Загружено выводов: {}',
     'concls_found': 'Найдено кирпичей (выводов или позиций) в текущей версии оглавлений ПСП: {}',
     'anlz_start': '>>> Обрабатываю корпус документов',
     'anlz_first_step': '>>> Ищу похожие документы',
+    'anlz_end': 'Анализ документов закончен, результаты записаны в папку {}',
     'new_session': '>>> Вы начали новый сеанс!',
 }
 
@@ -51,6 +53,7 @@ class MainLogic(smg.MainFrame):
         self.corpus_iterator = None
         self.concls = None
         self.date = None
+        self.max_date = None
         self.paths_to_corpus_and_concls = {key:None for key in ('CD', 'CNL')}
         self.save_res_folder = None
         self.start_widget()
@@ -63,6 +66,21 @@ class MainLogic(smg.MainFrame):
         self.widgets['TextArea'].btn_clean_all['state'] = 'normal'
         self.widgets['TextArea'].print_in(dbg.messanger(text))
     
+    def switch_clean_buttons(self, state):
+        if state != 'normal' and state != 'disabled':
+            raise ValueError('Incorrect argument: {}'.format(state))
+        btns = (
+            self.widgets['FileManager'].btn_clean_all,
+            self.widgets['FileManager'].btn_clean_CD,
+            self.widgets['FileManager'].btn_clean_CNL,
+            self.widgets['FileManager'].btn_clean_Save,
+            self.widgets['ListView'].btn_clean_all,
+            self.widgets['DateBox'].btn_clean_all,
+            self.widgets['TextArea'].btn_clean_all
+        )
+        for btn in btns:
+            btn['state'] = state
+
     def check_start_button_state(self):
         if self.concls and self.corpus_iterator and self.date:
             self.widgets['ControlButtons'].btn_Start['state'] = 'normal'
@@ -80,18 +98,17 @@ class MainLogic(smg.MainFrame):
         else:
             self.widgets['ControlButtons'].btn_clean_all['state'] = 'disabled'
         self.after(100, self.check_new_session_button_state)
-            
-    
+                
     def fill_in_DateBox_with_actual_years(self):
         min_year = self.corpus_iterator.dates_range[0].year
-        max_year = self.corpus_iterator.dates_range[1].year
+        self.max_date = self.corpus_iterator.dates_range[1]
         for cmb in (
             self.widgets['DateBox'].cmb_Year,
             self.widgets['DateBox'].cmb_Month
         ):
             cmb['state'] = 'readonly'
         self.widgets['DateBox'].cmb_Year['values'] = [
-            str(year) for year in range(min_year, max_year+1, 1)
+            str(year) for year in range(min_year, self.max_date.year+1, 1)
         ]
 
 
@@ -103,12 +120,16 @@ class MainLogic(smg.MainFrame):
             self.print_in(MESSAGES['corpus_proc'])
         self.widgets['FileManager'].btn_clean_CD['state'] = 'disabled'
         self.widgets['FileManager'].btn_clean_all['state'] = 'disabled'
-        self.corpus_iterator = iot.TextInfoCollector(folder_path)
+        self.widgets['FileManager'].btn_CNL['state'] = 'disabled'
+        self.widgets['FileManager'].btn_clean_all['state'] = 'disabled'
+        self.corpus_iterator = iot.TextInfoCollectorEndDate(folder_path)
         self.corpus_iterator.process_files()
         corp_len = len(self.corpus_iterator)
         with LOCK:
             self.print_in(MESSAGES['corpus_res'].format(corp_len))
         self.widgets['FileManager'].btn_clean_CD['state'] = 'normal'
+        self.widgets['FileManager'].btn_clean_all['state'] = 'normal'
+        self.widgets['FileManager'].btn_CNL['state'] = 'normal'
         self.widgets['FileManager'].btn_clean_all['state'] = 'normal'
         self.fill_in_DateBox_with_actual_years()
         self.widgets['TextArea'].prog_bar.stop()
@@ -138,13 +159,15 @@ class MainLogic(smg.MainFrame):
         self.widgets['TextArea'].prog_bar.stop()
     
     @dbg.method_speaker_timer('Start gensim pipeline!')
-    def staprt_pipline(self, corpus_iterator, concls, date, save_res_folder):
+    def start_pipline(self, corpus_iterator, concls, date, save_res_folder):
         self.widgets['TextArea'].prog_bar.start()
+        self.switch_clean_buttons('disabled')
         stpw = rwtools.load_pickle(INTERNAL_PATHS['stpw'])
         with LOCK:
             self.print_in(MESSAGES['anlz_first_step'])
+        current_corpus_iterator = corpus_iterator.find_docs_after_date(date)
         dct, dct_tfidf, sim_obj = pipeline_bgr(
-            corpus_iterator, stpw, 1, 0.85, num_best=15
+            current_corpus_iterator, stpw, 100, 0.85, num_best=15
         )
         for concl in concls:
             print(concl)
@@ -152,7 +175,8 @@ class MainLogic(smg.MainFrame):
             for item in form_output(
                 corpus_iterator,dct, dct_tfidf, sim_obj, query
             ):
-                print('\t\t', item)
+                print('\t\t', *item)
+        self.switch_clean_buttons('normal')
         self.widgets['TextArea'].prog_bar.stop()
 #################End of subthreads or subprocesses part
 
@@ -255,7 +279,10 @@ class MainLogic(smg.MainFrame):
     def retrieve_date(self):
         self.widgets['DateBox'].process_day(None) #None is a filler for tk.event argument holder in datebox.py DateBox method
         date = self.widgets['DateBox'].extract_internal_data()
-        self.print_in(MESSAGES['sel_date'].format(date))
+        if date > self.max_date:
+            self.print_in(MESSAGES['date_error'].format(self.max_date))
+            return None
+        self.print_in(MESSAGES['date_sel'].format(date))
         self.date = date
     
     @dbg.method_speaker('Catch ControlButtons.btn_Start press!')
@@ -269,7 +296,7 @@ class MainLogic(smg.MainFrame):
         self.concls = None
         self.date = None
         worker = thrd.Thread(
-            target=self.staprt_pipline,
+            target=self.start_pipline,
             args=(corpus_iterator, concls, date, save_res_folder)
         )
         worker.start()
