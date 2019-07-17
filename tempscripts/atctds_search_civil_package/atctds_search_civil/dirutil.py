@@ -22,3 +22,8 @@ def create_dir_struct(root, dir_struct):
         root = root + '/' + i
         print(root)
         create_dir_struct(root, dir_struct)
+
+def create_save_folder(root, folder_name):
+    path_obj = pthl.Path(root).joinpath(folder_name)
+    path_obj.mkdir(parents=True, exist_ok=True)
+    return path_obj

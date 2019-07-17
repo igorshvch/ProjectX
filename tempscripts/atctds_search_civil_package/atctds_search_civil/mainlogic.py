@@ -9,6 +9,7 @@ from atctds_search_civil import (
     debugger as dbg,
     iotext as iot,
     cnl_civil as cnl,
+    dirutil as dru,
 )
 from atctds_search_civil.textproc import rwtools
 from atctds_search_civil.gsm_wrap import (
@@ -42,6 +43,9 @@ INTERNAL_PATHS = {
     'stpw': pthl.Path().home().joinpath(
         'Робот', '_Работа программы', 'Стоп-слова', 'custom_stpw_wo_objections'
     ),
+    'res': pthl.Path().home().joinpath(
+        'Робот', '03 Результаты'
+    )
 }
 
 LOCK = thrd.Lock()
@@ -163,19 +167,30 @@ class MainLogic(smg.MainFrame):
         self.widgets['TextArea'].prog_bar.start()
         self.switch_clean_buttons('disabled')
         stpw = rwtools.load_pickle(INTERNAL_PATHS['stpw'])
+        current_save_folder = dru.create_save_folder(
+            save_res_folder, dbg.strftime('%Y-%m-%d %H-%M')
+        )
         with LOCK:
             self.print_in(MESSAGES['anlz_first_step'])
         current_corpus_iterator = corpus_iterator.find_docs_after_date(date)
         dct, dct_tfidf, sim_obj = pipeline_bgr(
             current_corpus_iterator, stpw, 100, 0.85, num_best=15
         )
-        for concl in concls:
+        for ind, concl in enumerate(concls, start=1):
+            holder = []
             print(concl)
             query = QueryProcessor(concl, stpw)
-            for item in form_output(
+            res = form_output(
                 corpus_iterator,dct, dct_tfidf, sim_obj, query
-            ):
+            )
+            for item in res:
                 print('\t\t', *item)
+            holder.append(concl)
+            holder.extend([item[0] for item in res])
+            res_string = '\n'.join(holder)
+            file_name = 'Вывод {:0>3d}.txt'.format(ind)
+            with open(current_save_folder.joinpath(file_name), mode='w') as f:
+                f.write(res_string)            
         self.switch_clean_buttons('normal')
         self.widgets['TextArea'].prog_bar.stop()
 #################End of subthreads or subprocesses part
