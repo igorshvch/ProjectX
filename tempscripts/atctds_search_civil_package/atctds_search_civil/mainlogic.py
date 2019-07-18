@@ -45,7 +45,8 @@ INTERNAL_PATHS = {
     ),
     'res': pthl.Path().home().joinpath(
         'Робот', '03 Результаты'
-    )
+    ),
+    'icon': lambda: pthl.Path(__file__).parent.joinpath('data/pad_icon2.ico'),
 }
 
 LOCK = thrd.Lock()
@@ -53,6 +54,8 @@ LOCK = thrd.Lock()
 
 class MainLogic(smg.MainFrame):
     def __init__(self, parent):
+        parent.title('Автоматический добор судебной практики для ПСП')
+        parent.iconbitmap(INTERNAL_PATHS['icon']())
         smg.MainFrame.__init__(self, parent)
         self.corpus_iterator = None
         self.concls = None

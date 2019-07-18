@@ -69,14 +69,11 @@ class MyReaderEndDate(MyReader):
     '''
     def __init__(self, file):
         MyReader.__init__(self, file)
-        #store dates positions by date {date : [pos1, pos2]}
-        #for code analysis puprose
-        self.dates_to_poses = {}
-        self.dates_poses = []
-        #store docs positions by date {date: [ind1, ind2, ...]}
-        self.dates_to_docs = {}
         #Inhereted attribute: self.docs_poses
         #it stores docs positions: [(p1s, p1e), (p2s, p2e), ...]
+        self.dates_poses = [] # [p1, p2, ...]
+        self.dates_to_poses = {} #store dates positions {date : [ind1, ind2]}
+        self.dates_to_docs = {} #store docs positions by date {date: [ind1, ind2, ...]}
 
     def find_docs(self,
                   pattern_date=r'Когда получен[\n\r]{1,2}',
@@ -85,6 +82,10 @@ class MyReaderEndDate(MyReader):
                   codec='cp1251'):
         #Patterns 1: (r'Когда получен\n', r'Текст документа\n', r'-{66}')
         #Patterns 2: (r'Когда получен[\n\r]{1,2}', r'Текст документа[\n\r]{1,2}', r'-{66}')
+        docs_poses = []
+        dates_poses = []
+        dates_to_docs = {}
+        dates_to_poses = {}
         buffer = self.file.buffer
         buffer.seek(0)
         last_position = -1
@@ -94,22 +95,29 @@ class MyReaderEndDate(MyReader):
             if re.match(pattern_date, line):
                 d = buffer.readline().decode(codec)[:-1].split('.')
                 d = date(int(d[2]), int(d[1]), int(d[0]))
-                self.dates_to_poses.setdefault(d, []).append(current_position)
-                self.dates_poses.append(current_position)
+                dates_to_poses.setdefault(d, []).append(
+                    len(dates_poses)
+                )
+                dates_poses.append(current_position)
                 continue
             elif re.match(pattern_doc_start, line):
                 start_pos = current_position
                 continue
             elif re.match(pattern_doc_end, line):
                 end_pos = current_position
-                self.dates_to_docs.setdefault(d, []).append(
-                    len(self.docs_poses)
+                dates_to_docs.setdefault(d, []).append(
+                    len(docs_poses)
                 )
-                self.docs_poses.append((start_pos, end_pos))
+                docs_poses.append((start_pos, end_pos))
             if last_position == current_position:
                 break
             else:
                 last_position = current_position
+        self.docs_poses = docs_poses
+        self.dates_poses = dates_poses
+        self.dates_to_docs = dates_to_docs
+        self.dates_to_poses = dates_to_poses
+        
 
     def find_doc(self, index, codec='cp1251', show_date=False):
         buffer = self.file.buffer
@@ -123,15 +131,14 @@ class MyReaderEndDate(MyReader):
             text = d + text
         return text
 
-    def find_docs_by_date(self, year, month, day, codec='cp1251'):
-        d = date(year, month, day)
-        if d not in self.dates_to_docs:
-            yield ''
+    def find_docs_by_date(self, date_obj, codec='cp1251'):
+        if date_obj not in self.dates_to_docs:
+            raise KeyError('No acts to date {}'.format(date_obj))
         doc_poses = self.docs_poses
-        doc_indices = self.dates_to_docs[d]
+        doc_indices = self.dates_to_docs[date_obj]
         print(
             'There are {: >3d}'.format(len(doc_indices)),
-            'documents by date {}'.format(str(d))
+            'documents by date {}'.format(date_obj)
         )
         buffer = self.file.buffer
         for index in doc_indices:
@@ -146,8 +153,12 @@ class MyReaderEndDate(MyReader):
         for key_date in sorted(self.dates_to_docs.keys()):
             if date_obj <= key_date:
                 doc_indices += self.dates_to_docs[key_date]
+        print(
+            'There are {: >3d}'.format(len(doc_indices)),
+            'documents by date {}'.format(date_obj)
+        )
         for index in doc_indices:
-            yield self.find_doc(index) 
+            yield self.find_doc(index)
     
     def print_stats(self):
         print('-'*22)
@@ -307,7 +318,25 @@ class MyReaderGroups(MyReaderEndDate):
                 yield self.find_doc(ind) 
 
 
-class MyReader_testing(MyReaderGroups):
+class MyReaderEndDateTest(MyReaderEndDate):
+    def __init__(self, *args, **kwargs):
+        MyReaderEndDate.__init__(self, *args, **kwargs)
+    
+    def find_doc_date(self, index):
+        self.file.seek(self.dates_poses[index])
+        d = self.file.readline()
+        return d
+
+    def find_doc_dates_after_date(self, date_obj):
+        doc_indices = []
+        for key_date in sorted(self.dates_to_poses.keys()):
+            if date_obj <= key_date:
+                doc_indices += self.dates_to_poses[key_date]
+        for index in doc_indices:
+            yield self.find_doc_date(index)
+
+
+class MyReaderGroupsTest(MyReaderGroups):
     def __init__(self, *args):
         MyReaderGroups.__init__(self, *args)
     
@@ -338,6 +367,7 @@ class MyReader_testing(MyReaderGroups):
                     if re.search(self.patterns[key], line):
                         holder.append((ind, self.patterns[key]))
         return holder
+
 
 class TextInfoCollectorEndDate():
     def __init__(self, folder):
@@ -387,11 +417,13 @@ class TextInfoCollectorEndDate():
         for key in sorted(self.readers.keys()):
             yield from self.readers[key].find_docs_after_date(date_obj)
 
+
 class TextInfoCollectorGropus():
     def __init__(self, folder, path_to_patterns):
         self.path_to_patterns = path_to_patterns
         self.folder = folder
         self.readers = {}
+
     @timer
     def process_files(self):
         f_paths = rwtools.collect_exist_files(self.folder, suffix='.txt')
@@ -404,7 +436,7 @@ class TextInfoCollectorGropus():
                 r'Когда получен\r', r'Текст документа\r', r'-{66}'
             )
     
-    def find_relevant_docs_by_date(self, docs_class_key, year, month, day):
+    def find_relevant_docs_after_date(self, docs_class_key, year, month, day):
         for key in sorted(self.readers.keys()):
             yield from self.readers[key].find_relevant_docs_after_date(
                 docs_class_key, year, month, day
@@ -431,3 +463,39 @@ class TextInfoCollectorGropus():
         for key in self.readers.keys():
             if d in self.readers[key].dates_to_docs:
                 print(key, '===', self.readers[key].dates_to_docs[d])
+
+
+class TextInfoCollectorEndDateTest(TextInfoCollectorEndDate):
+    def __init__(self, *args, **kwargs):
+        TextInfoCollectorEndDate.__init__(self, *args, **kwargs)
+    
+    @timer
+    def process_files(self):
+        dates_range = []
+        f_paths = rwtools.collect_exist_files(self.folder, suffix='.txt')
+        for path in f_paths:
+            self.readers[path.stem] = MyReaderEndDateTest(
+                open(path, mode='r')
+            )
+            self.readers[path.stem].find_docs(
+                r'Когда получен\r', r'Текст документа\r', r'-{66}'
+            )
+            dates_range.append(
+                min(self.readers[path.stem].dates_to_poses.keys())
+            )
+            dates_range.append(
+                max(self.readers[path.stem].dates_to_poses.keys())
+            )
+        counter = 0
+        for key in self.readers:
+            for j in range(len(self.readers[key])):
+                self.docs_poses[counter] = (key, j)
+                counter += 1
+        minimum = min(dates_range)
+        maximum = max(dates_range)
+        self.dates_range.append(minimum)
+        self.dates_range.append(maximum)
+    
+    def find_doc_dates_after_date(self, date_obj):
+        for key in sorted(self.readers.keys()):
+            yield from self.readers[key].find_doc_dates_after_date(date_obj)
