@@ -117,7 +117,6 @@ class MyReaderEndDate(MyReader):
         self.dates_poses = dates_poses
         self.dates_to_docs = dates_to_docs
         self.dates_to_poses = dates_to_poses
-        
 
     def find_doc(self, index, codec='cp1251', show_date=False):
         buffer = self.file.buffer
@@ -332,8 +331,24 @@ class MyReaderEndDateTest(MyReaderEndDate):
         for key_date in sorted(self.dates_to_poses.keys()):
             if date_obj <= key_date:
                 doc_indices += self.dates_to_poses[key_date]
+        print(
+            'There are {: >3d}'.format(len(doc_indices)),
+            'documents after date {}'.format(date_obj)
+        )
         for index in doc_indices:
             yield self.find_doc_date(index)
+    
+    def find_docs_after_date(self, date_obj):
+        doc_indices = []
+        for key_date in sorted(self.dates_to_docs.keys()):
+            if date_obj <= key_date:
+                doc_indices += self.dates_to_docs[key_date]
+        print(
+            'There are {: >3d}'.format(len(doc_indices)),
+            'documents by date {}'.format(date_obj)
+        )
+        for index in doc_indices:
+            yield self.find_doc(index)
 
 
 class MyReaderGroupsTest(MyReaderGroups):
