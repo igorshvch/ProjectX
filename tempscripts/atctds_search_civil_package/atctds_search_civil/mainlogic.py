@@ -177,7 +177,7 @@ class MainLogic(smg.MainFrame):
             self.print_in(MESSAGES['anlz_first_step'])
         current_corpus_iterator = corpus_iterator.find_docs_after_date(date)
         dct, dct_tfidf, sim_obj = pipeline_bgr(
-            current_corpus_iterator, stpw, 100, 0.85, num_best=15
+            current_corpus_iterator, stpw, 10, 0.925, num_best=15
         )
         for ind, concl in enumerate(concls, start=1):
             holder = []

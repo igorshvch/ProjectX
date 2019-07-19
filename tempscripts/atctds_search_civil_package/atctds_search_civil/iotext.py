@@ -145,7 +145,7 @@ class MyReaderEndDate(MyReader):
             buffer.seek(start)
             doc_b = buffer.read(stop-start)
             text = doc_b.decode(codec)[2:-74]
-            yield text
+            yield (index, text)
     
     def find_docs_after_date(self, date_obj):
         doc_indices = []
@@ -154,10 +154,10 @@ class MyReaderEndDate(MyReader):
                 doc_indices += self.dates_to_docs[key_date]
         print(
             'There are {: >3d}'.format(len(doc_indices)),
-            'documents by date {}'.format(date_obj)
+            'documents after date {}'.format(date_obj)
         )
         for index in doc_indices:
-            yield self.find_doc(index)
+            yield (index, self.find_doc(index))
     
     def print_stats(self):
         print('-'*22)
@@ -173,12 +173,11 @@ class MyReaderEndDate(MyReader):
         print('Docs in total :', counter)
         print('-'*22)
     
-    def print_stats_by_date(self, year, month, day):
-        d = date(year, month, day)
-        if d not in self.dates_to_poses:
-            raise KeyError('No docs by date {}',format(str(d)))
-        docs_quant = len(self.dates_to_poses[d])
-        print('{: <11s} : {: >4d} docs'.format(str(d), docs_quant))
+    def print_stats_by_date(self, date_obj):
+        if date_obj not in self.dates_to_poses:
+            raise KeyError('No docs by date {}',format(date_obj))
+        docs_quant = len(self.dates_to_poses[date_obj])
+        print('{: <11s} : {: >4d} docs'.format(str(date_obj), docs_quant))
 
 
 class MyReaderGroups(MyReaderEndDate):
@@ -338,17 +337,23 @@ class MyReaderEndDateTest(MyReaderEndDate):
         for index in doc_indices:
             yield self.find_doc_date(index)
     
-    def find_docs_after_date(self, date_obj):
-        doc_indices = []
-        for key_date in sorted(self.dates_to_docs.keys()):
+    def print_stats_after_date(self, date_obj):
+        print('-'*22)
+        print('Path to file:')
+        print(self.file.name)
+        print('-'*22)
+        counter = 0
+        for key_date in sorted(self.dates_to_poses.keys()):
             if date_obj <= key_date:
-                doc_indices += self.dates_to_docs[key_date]
-        print(
-            'There are {: >3d}'.format(len(doc_indices)),
-            'documents by date {}'.format(date_obj)
-        )
-        for index in doc_indices:
-            yield self.find_doc(index)
+                total_by_date = len(self.dates_to_poses[key_date])
+                print(
+                    '{: <11s} : {: >3d} docs'.format(
+                        str(key_date), total_by_date
+                    )
+                )
+                counter += total_by_date
+        print('Docs in total :', counter)
+        print('-'*22)
 
 
 class MyReaderGroupsTest(MyReaderGroups):
