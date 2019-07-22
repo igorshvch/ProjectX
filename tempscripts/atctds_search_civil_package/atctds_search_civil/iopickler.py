@@ -1,12 +1,13 @@
 import pickle
+import tempfile
 
-from debugger import timer
+import atctds_search_civil.debugger as dbg
 
 class IOPickler():
     '''
     Create interface to file with pickled python objects
     '''
-    def __init__(self, file):
+    def __init__(self, file = tempfile.TemporaryFile()):
         self.file = file
         self.indexer = []
         self.file_name = file.name
@@ -42,7 +43,8 @@ class IOPickler():
             return 'File is closed!'
         self.file.close()
 
-    @timer
+    #@dbg.timer
+    @dbg.method_speaker_timer('IOPickler writing!')
     def write(self, data_iterable):
         if self.file.closed:
             return 'File is closed!'

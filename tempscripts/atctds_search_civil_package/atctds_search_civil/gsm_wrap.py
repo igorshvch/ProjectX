@@ -23,9 +23,19 @@ def pipeline_bgr(corpus_iterator,
                 num_best=15,
                 lem_map=None,
                 prune_at=3000000):
+    print(dbg.messanger('Creating sub-corpus!'))
+    new_corpus_iterator = iop.IOPickler()
+    new_corpus_iterator.write(corpus_iterator)
+    print(
+        dbg.messanger(
+            'total docs in new_corpus_iterator: {}'.format(
+                len(new_corpus_iterator)
+            )
+        )
+    )
     print(dbg.messanger('Start word normalization!'))
     tknz = tok.TokenizerLemBigr(
-        corpus_iterator, stpw, lem_map=lem_map
+        new_corpus_iterator, stpw, lem_map=lem_map
     )
     print(dbg.messanger('Start dictionary creation!'))
     dct = gsm.corpora.Dictionary(tknz, prune_at=prune_at)
@@ -43,7 +53,7 @@ def pipeline_bgr(corpus_iterator,
         num_features=len(dct),
         num_best=num_best
     )
-    return dct, dct_tfidf, similarity_obj
+    return new_corpus_iterator, dct, dct_tfidf, similarity_obj
 
 def form_output(corpus_iterator,
                 dct,

@@ -10,7 +10,7 @@ class ListView(ttk.Frame, CommonInterface):
         CommonInterface.__init__(self, parent)
         self.label_scrl = None #label
         self.lstb = None #tk.Listbox
-        self.scrl = None #ttk.Scrollbar
+        self.scrl_y = None #ttk.Scrollbar
         self.btn_clean_all = None
         self.label_count1 = None #label with description of the following widget
         self.label_count2 = None #label to count quantity of loaded conclusions
@@ -38,12 +38,19 @@ class ListView(ttk.Frame, CommonInterface):
             width=50,
             selectmode='extended'
         )
-        self.scrl = ttk.Scrollbar(
+        self.scrl_y = ttk.Scrollbar(
             self,
             orient='vertical',
             command=self.lstb.yview
         )
-        self.lstb['yscrollcommand'] = self.scrl.set
+        self.lstb['yscrollcommand'] = self.scrl_y.set
+        self.scrl_x = ttk.Scrollbar(
+            self,
+            orient='horizontal',
+            command=self.lstb.xview
+        )
+        self.lstb['xscrollcommand'] = self.scrl_x.set
+
         self.btn_clean_all = ttk.Button(
             self,
             text='X',
@@ -72,10 +79,11 @@ class ListView(ttk.Frame, CommonInterface):
     def grid_inner_widgets(self):
         self.lb_scrl.grid(column=0, row=0, columnspan=3, sticky='we')
         self.lstb.grid(column=0, row=1, columnspan=3, sticky='we')
-        self.scrl.grid(column=3, row=1, sticky='nws')
-        self.btn_clean_all.grid(column=0, row=2, sticky='w')
-        self.label_count1.grid(column=1, row=2, sticky='e')
-        self.label_count2.grid(column=2, row=2, sticky='e')
+        self.scrl_y.grid(column=3, row=1, sticky='nws')
+        self.scrl_x.grid(column=0, row=2, columnspan=3, sticky='enw')
+        self.btn_clean_all.grid(column=0, row=3, sticky='w')
+        self.label_count1.grid(column=1, row=3, sticky='e')
+        self.label_count2.grid(column=2, row=3, sticky='e')
 
 ###############################################################################
 ############################### testing: ######################################

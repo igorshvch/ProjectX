@@ -176,7 +176,7 @@ class MainLogic(smg.MainFrame):
         with LOCK:
             self.print_in(MESSAGES['anlz_first_step'])
         current_corpus_iterator = corpus_iterator.find_docs_after_date(date)
-        dct, dct_tfidf, sim_obj = pipeline_bgr(
+        new_corpus_iterator, dct, dct_tfidf, sim_obj = pipeline_bgr(
             current_corpus_iterator, stpw, 10, 0.925, num_best=15
         )
         for ind, concl in enumerate(concls, start=1):
@@ -184,7 +184,7 @@ class MainLogic(smg.MainFrame):
             print(concl)
             query = QueryProcessor(concl, stpw)
             res = form_output(
-                corpus_iterator,dct, dct_tfidf, sim_obj, query
+                new_corpus_iterator, dct, dct_tfidf, sim_obj, query
             )
             for item in res:
                 print('\t\t', *item)

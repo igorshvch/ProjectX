@@ -145,7 +145,7 @@ class MyReaderEndDate(MyReader):
             buffer.seek(start)
             doc_b = buffer.read(stop-start)
             text = doc_b.decode(codec)[2:-74]
-            yield (index, text)
+            yield text
     
     def find_docs_after_date(self, date_obj):
         doc_indices = []
@@ -157,7 +157,7 @@ class MyReaderEndDate(MyReader):
             'documents after date {}'.format(date_obj)
         )
         for index in doc_indices:
-            yield (index, self.find_doc(index))
+            yield self.find_doc(index)
     
     def print_stats(self):
         print('-'*22)
