@@ -10,4 +10,4 @@ def code_count_lines(folder, suffix='.py', encoding='utf'):
             counter += len(code.split('\n'))
         except:
             print(i.name)
-    return counter
+    return '{: >5d} lines in {: >3d} files'.format(counter, len(fp))
