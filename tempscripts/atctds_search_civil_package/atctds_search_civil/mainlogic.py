@@ -56,7 +56,11 @@ class MainLogic(smg.MainFrame):
     def __init__(self, parent):
         parent.title('Автоматический добор судебной практики для ПСП')
         parent.iconbitmap(INTERNAL_PATHS['icon']())
-        smg.MainFrame.__init__(self, parent)
+        smg.MainFrame.__init__(
+            self,
+            parent,
+            icon_path=INTERNAL_PATHS['icon']()
+        )
         self.corpus_iterator = None
         self.concls = None
         self.date = None
@@ -292,6 +296,7 @@ class MainLogic(smg.MainFrame):
     def clean_ListView_and_FileManager_CNL(self):
         self.widgets['ListView'].cmd_clean_all()
         self.widgets['FileManager'].cmd_clean('CNL')
+        self.concls = None
     
     @dbg.method_speaker('Catch DateBox cmb_Day selection!')
     def retrieve_date(self):
@@ -330,6 +335,32 @@ class MainLogic(smg.MainFrame):
         self.paths_to_corpus_and_concls = {key:None for key in ('CD', 'CNL')}
         self.save_res_folder = None
         self.print_in(MESSAGES['new_session'])
+    
+    @dbg.method_speaker('Catch ListView.manual_interface.btn_OK press!')
+    def get_concl_from_manual_input(self):
+        if not self.concls:
+            self.concls = []
+        concl = self.widgets['ListView'].manual_interface.res_var.get()
+        concl = concl.split(
+            self.widgets['ListView'].sep
+        )
+        concl = cnl.cleaner_for_manually_entered_query(concl)
+        if concl:
+            self.concls.append(concl)
+            self.widgets['ListView'].btn_clean_all['state'] = 'normal'
+            self.widgets['FileManager'].btn_CNL['state'] = 'disabled'
+        self.widgets['ListView'].l_count_var.set(str(len(self.concls)))
+        self.widgets['ListView'].lstb_var.set(self.concls)
+    
+    @dbg.method_speaker('Catch ListView.btn_Manual press!')
+    def insert_manually(self):
+        self.widgets['ListView'].cmd_insert_manually(solo_mode=False)
+        self.widgets['ListView'].manual_interface.btn_OK['command'] = (
+            self.get_concl_from_manual_input
+        )
+        self.widgets['ListView'].manual_interface.grid(
+            column=0, row=0, sticky='nswe'
+        )
 
     @dbg.method_speaker('Changing buttons-to-actions mapping!')
     def buttons_to_actions(self):
@@ -374,6 +405,9 @@ class MainLogic(smg.MainFrame):
         )
         self.widgets['ControlButtons'].btn_clean_all['command'] = (
             self.clean_everything
+        )
+        self.widgets['ListView'].btn_Manual['command'] = (
+            self.insert_manually
         )
 
 

@@ -12,15 +12,16 @@ from .controlbuttons import ControlButtons
 from atctds_search_civil import debugger as dbg
 
 class MainFrame(ttk.Frame, CommonInterface):
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, icon_path=None, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
         CommonInterface.__init__(self, parent)
         self.sep_fm = None # ttk.Separator for FileManager widget area
         self.sep_lv = None # ttk.Separator for ListView widget area
         self.sep_ta = None # ttk.Separator for TextArea widget area
         self.sep_cb = None # ttk.Separator for ControlButtons widget area
+        self.icon_path = icon_path
         
-    def initiate_main_widgets(self):    
+    def initiate_main_widgets(self):
         self.widgets = {
             'FileManager': FileManager(self),
             'ListView': ListView(self),
@@ -28,6 +29,8 @@ class MainFrame(ttk.Frame, CommonInterface):
             'TextArea': TextArea(self),
             'ControlButtons': ControlButtons(self)
         }
+        if self.icon_path:
+            self.widgets['ListView'].icon_path = self.icon_path
     
     def build_widgets(self):
         self.initiate_main_widgets()

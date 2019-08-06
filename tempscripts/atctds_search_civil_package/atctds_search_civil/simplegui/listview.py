@@ -4,10 +4,12 @@ import tkinter.scrolledtext as tkst
 from tkinter import ttk
 
 from atctds_search_civil import debugger as dbg
-from atctds_search_civil.simplegui.patterns import CommonInterface
+from atctds_search_civil.simplegui.patterns import (
+    CommonInterface, CustomTextWidgetRu
+)
 
 class ListView(ttk.Frame, CommonInterface):
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, icon_path=None, sep=' / ', **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
         CommonInterface.__init__(self, parent)
         self.label_scrl = None #label
@@ -21,14 +23,42 @@ class ListView(ttk.Frame, CommonInterface):
         self.label_count2 = None #label to count quantity of loaded conclusions
         self.lstb_var = tk.StringVar()
         self.l_count_var = tk.StringVar()
+        self.manual_interface = None
+        self.icon_path = icon_path
+        self.sep = sep
     
     @dbg.method_speaker('Open interface to insert conclusion manually')
-    def cmd_insert_manually(self):
-        self.win = tk.Toplevel()
-        self.win.title('Введите поисковый запрос вручную')
-        self.manual_interface = ConclsManualInput(self.win)
+    def cmd_insert_manually(self, solo_mode=True):
+        win = tk.Toplevel()
+        if self.icon_path:
+            win.iconbitmap(self.icon_path)
+        win.title('Введите поисковый запрос вручную')
+        self.manual_interface = ConclsManualInputCTWR(
+            win,
+            sep=self.sep
+        )
         self.manual_interface.start_widget()
-        self.manual_interface.grid(column=0, row=0, sticky='nswe')
+        if solo_mode:
+            self.manual_interface.grid(column=0, row=0, sticky='nswe')
+    
+    @dbg.method_speaker('Show full text of the query!')
+    def pop_up_info(self, event):
+        try:
+            index = self.lstb.curselection()[0]
+        except IndexError:
+            return None
+        #data = self.lstb_var.get()
+        #data = [item.strip("(',')") for item in data.split(', ')][index]
+        data = self.lstb.get(index)
+        win = tk.Toplevel()
+        if self.icon_path:
+            win.iconbitmap(self.icon_path)
+        win.title('Текст поискового запроса в формате программы')
+        txt = CustomTextWidgetRu(win, label='', btn_clean_all=False)
+        txt.start_widget()
+        txt.inner_insert('1.0', data)
+        txt.txt['state'] = 'disabled'
+        txt.grid(column=0, row=0, sticky='nwse')
     
     @dbg.method_speaker('Cleaning ListView widgets!')
     def cmd_clean_all(self):
@@ -60,8 +90,10 @@ class ListView(ttk.Frame, CommonInterface):
             listvariable=self.lstb_var,
             height=10,
             width=50,
-            selectmode='extended'
+            selectmode='browse'
         )
+        self.lstb.bind('<Double-1>', self.pop_up_info)
+
         self.scrl_y = ttk.Scrollbar(
             self,
             orient='vertical',
@@ -152,6 +184,7 @@ class ConclsManualInput(ttk.Frame, CommonInterface):
         self.after(100, self.load_entered_text)
     
     def custom_binding(self):
+        #Text 'Article' binding:
         self.txt_article.bind(
                 '<Control-igrave>',
                 lambda x: self.custom_insert(self.txt_article)
@@ -164,7 +197,7 @@ class ConclsManualInput(ttk.Frame, CommonInterface):
                 '<Control-ntilde>',
                 lambda x: self.custom_copy(self.txt_article)
             )
-
+        #Text 'Theme' binding:
         self.txt_theme.bind(
                 '<Control-igrave>',
                 lambda x: self.custom_insert(self.txt_theme)
@@ -177,7 +210,7 @@ class ConclsManualInput(ttk.Frame, CommonInterface):
                 '<Control-ntilde>',
                 lambda x: self.custom_copy(self.txt_theme)
             )
-
+        #Text 'Concl' binding:
         self.txt_concl.bind(
                 '<Control-igrave>',
                 lambda x: self.custom_insert(self.txt_concl)
@@ -190,8 +223,7 @@ class ConclsManualInput(ttk.Frame, CommonInterface):
                 '<Control-ntilde>',
                 lambda x: self.custom_copy(self.txt_concl)
             )
-        
-
+        #Text 'Pos' binding:
         self.txt_pos.bind(
                 '<Control-igrave>',
                 lambda x: self.custom_insert(self.txt_pos)
@@ -204,7 +236,7 @@ class ConclsManualInput(ttk.Frame, CommonInterface):
                 '<Control-ntilde>',
                 lambda x: self.custom_copy(self.txt_pos)
             )
-
+        #Text 'Anno' binding:
         self.txt_anno.bind(
                 '<Control-igrave>',
                 lambda x: self.custom_insert(self.txt_anno)
@@ -368,6 +400,113 @@ class ConclsManualInput(ttk.Frame, CommonInterface):
         self.label_info_content.grid(column=0, row=11, sticky='nw')
 
 
+class ConclsManualInputCTWR(ttk.Frame, CommonInterface):
+    def __init__(self, parent, sep=' / ', **kwargs):
+        ttk.Frame.__init__(self, parent, **kwargs)
+        CommonInterface.__init__(self, parent)
+        self.sep = sep
+        self.txt_article = None
+        self.txt_theme = None
+        self.txt_concl = None
+        self.txt_pos = None
+        self.txt_anno = None
+        self.label_res = None
+        self.btn_clean_all = None
+        self.btn_OK = None
+        self.inner_txt_widgets = None
+        self.res_var = tk.StringVar()
+    
+    @dbg.method_speaker('Register btn_clean_all press!')
+    def cmd_clean_all(self):
+        for widget in self.inner_txt_widgets:
+            widget.cmd_clean_all()
+        self.res_var.set('')
+    
+    @dbg.method_speaker('Register btn_OK press!')
+    def dummy_method(self):
+        return None
+    
+    def build_widgets(self):
+        text_width = 70
+        text_height = 5
+        self.txt_article = CustomTextWidgetRu(
+            self,
+            label='Введите номер и заголовок статьи:',
+            t_width=text_width,
+            t_height=text_height
+        )
+        self.txt_theme = CustomTextWidgetRu(
+            self,
+            label='Введите название раздела, в который помещен вывод:',
+            t_width=text_width,
+            t_height=text_height
+        )
+        self.txt_concl = CustomTextWidgetRu(
+            self,
+            label='Введите вывод:',
+            t_width=text_width,
+            t_height=text_height
+        )
+        self.txt_pos = CustomTextWidgetRu(
+            self,
+            label='Введите позицию (если есть):',
+            t_width=text_width,
+            t_height=text_height
+        )
+        self.txt_anno = CustomTextWidgetRu(
+            self,
+            label='Введите аннотацию вывода или позиции (если есть):',
+            t_width=text_width,
+            t_height=text_height
+        )
+        self.label_res = ttk.Label(
+            self,
+            textvar=self.res_var,
+            wraplength=550
+        )
+        self.inner_txt_widgets = (
+            self.txt_article,
+            self.txt_theme,
+            self.txt_concl,
+            self.txt_pos,
+            self.txt_anno,
+        )
+        #Btn:
+        self.btn_clean_all = ttk.Button(
+            self,
+            text='Очистить все',
+            command=self.cmd_clean_all
+        )
+        self.btn_OK = ttk.Button(
+            self,
+            text='Ок',
+            command=self.dummy_method
+        )
+    
+    def grid_inner_widgets(self):
+        for ind, widget in enumerate(self.inner_txt_widgets):
+            widget.start_widget()
+            widget.grid(column=0, row=ind, columnspan=3, sticky='nw')
+        self.btn_clean_all.grid(column=1, row=ind+1, sticky='ew')
+        self.btn_OK.grid(column=2, row=ind+1, sticky='ew')
+        self.label_res.grid(column=0, row=ind+2, columnspan=3, sticky='nw')
+        self.load_entered_text()
+    
+    def load_entered_text(self):
+        text = ''
+        for widget in self.inner_txt_widgets:
+            raw_text = widget.inner_get('1.0', 'end-1c')
+            raw_text = raw_text.strip()
+            if text:
+                if raw_text:
+                    text += self.sep + raw_text
+            else:
+                text = raw_text
+        self.res_var.set(text)
+        self.update()
+        self.after(10, self.load_entered_text)
+
+
 ###############################################################################
 ############################### testing: ######################################
 ###############################################################################
@@ -393,7 +532,7 @@ class ListViewTest(ListView):
     def start_widget(self):
         self.build_widgets()
         self.btn_clean_all['state'] = 'normal'
-        self.lstb.bind('<Double-1>', lambda x: self.insert_data())
+        self.lstb.bind('<Double-2>', lambda x: self.insert_data())
         self.lstb.bind('<Double-3>', lambda x: self.erase_data())
         self.grid_inner_widgets()
 

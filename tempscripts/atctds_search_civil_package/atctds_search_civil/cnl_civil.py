@@ -67,12 +67,48 @@ CLEANED_POSITION = r'(?<=Позиция ).*'
 
 #__CLEANED_QUESTION = r'(?<=Вывод из судебной практики: ).*'
 
+def clean_article_or_theme(text):
+    cleaned = re.search(CLEANED_ARTICLE_n_THEME, text)
+    if cleaned:
+        return cleaned.group().strip(STRIP)
+    return text.strip(STRIP)
+
 def clean_question(text):
     for key in sorted(CLEANED_QUESTION_POS.keys()):
-        if re.search(CLEANED_QUESTION_POS[key], text):
-            question = re.search(CLEANED_QUESTION_POS[key], text).group()
-            return question.strip(STRIP)
+        cleaned = re.search(CLEANED_QUESTION_POS[key], text)
+        if cleaned:
+            return cleaned.group().strip(STRIP)
     return text.strip(STRIP)
+
+def clean_position(text):
+    cleaned = re.search(CLEANED_POSITION, text)
+    if cleaned:
+        return cleaned.group().strip(STRIP)
+    return text.strip(STRIP)
+
+def cleaner_for_manually_entered_query(query_parts):
+    parts_quant = len(query_parts)
+    article = clean_article_or_theme(query_parts[0])
+    theme = clean_article_or_theme(query_parts[1])
+    question = clean_question(query_parts[2])
+    if parts_quant == 3:
+        return ' '.join((article, theme, question))
+    elif parts_quant > 3:
+        position = clean_position(query_parts[3])
+        if parts_quant == 4:
+            return ' '.join((article, theme, question, position))
+        elif parts_quant == 5:
+            return ' '.join(
+                (
+                    article,
+                    theme,
+                    question,
+                    position,
+                    query_parts[4]
+                )
+            )
+    else:
+        raise ValueError('Incorrect value with {} items'.format(parts_quant))
 
 def process_exist_contents(text, full_output=False):
     spl = text.rstrip('\n\t\r').split('\n')
