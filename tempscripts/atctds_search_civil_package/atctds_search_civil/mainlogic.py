@@ -72,31 +72,36 @@ class MainLogic(smg.MainFrame):
         self.print_in(MESSAGES['start_mes'])
         self.check_start_button_state()
         self.check_new_session_button_state()
+        self.btns = {
+            'FB_bca': self.widgets['FileManager'].btn_clean_all,
+            'FB_bCD': self.widgets['FileManager'].btn_CD,
+            'FB_bcCD': self.widgets['FileManager'].btn_clean_CD,
+            'FB_bCNL': self.widgets['FilaMenager'].btn_CNL,
+            'FB_bcCNL': self.widgets['FileManager'].btn_clean_CNL,
+            'FB_bS': self.widgets['FileManager'].btn_Save,
+            'FB_bcS': self.widgets['FileManager'].btn_clean_Save,
+            'LV_bca': self.widgets['ListView'].btn_clean_all,
+            'DB_bca': self.widgets['DateBox'].btn_clean_all,
+            'CB_bSt': self.widgets['ControlButtons'].btn_Start,
+            'CB_bca': self.widgets['ControlButtons'].btn_clean_all,
+            'TA_bca': self.widgets['TextArea'].btn_clean_all,
+        }
     
     def print_in(self, text):
         self.widgets['TextArea'].btn_clean_all['state'] = 'normal'
         self.widgets['TextArea'].print_in(dbg.messanger(text))
     
-    def switch_clean_buttons(self, state):
+    def switch_buttons(self, state, *btns):
         if state != 'normal' and state != 'disabled':
             raise ValueError('Incorrect argument: {}'.format(state))
-        btns = (
-            self.widgets['FileManager'].btn_clean_all,
-            self.widgets['FileManager'].btn_clean_CD,
-            self.widgets['FileManager'].btn_clean_CNL,
-            self.widgets['FileManager'].btn_clean_Save,
-            self.widgets['ListView'].btn_clean_all,
-            self.widgets['DateBox'].btn_clean_all,
-            self.widgets['TextArea'].btn_clean_all
-        )
         for btn in btns:
-            btn['state'] = state
+            self.btns[btn] = state
 
     def check_start_button_state(self):
         if self.concls and self.corpus_iterator and self.date:
-            self.widgets['ControlButtons'].btn_Start['state'] = 'normal'
+            self.switch_buttons('normal', ('CB_bSt',))
         else:
-            self.widgets['ControlButtons'].btn_Start['state'] = 'disabled'
+            self.switch_buttons('disabled', ('CB_bSt',))
         self.after(100, self.check_start_button_state)
     
     def check_new_session_button_state(self):
@@ -105,9 +110,9 @@ class MainLogic(smg.MainFrame):
             or self.paths_to_corpus_and_concls['CNL']
             or self.save_res_folder
         ):
-            self.widgets['ControlButtons'].btn_clean_all['state'] = 'normal'
+            self.switch_buttons('normal', ('CB_bca',))
         else:
-            self.widgets['ControlButtons'].btn_clean_all['state'] = 'disabled'
+            self.switch_buttons('disabled', ('CB_bca',))
         self.after(100, self.check_new_session_button_state)
                 
     def fill_in_DateBox_with_actual_years(self):
@@ -169,7 +174,7 @@ class MainLogic(smg.MainFrame):
         self.widgets['ListView'].btn_clean_all['state'] = 'normal'
         self.widgets['TextArea'].prog_bar.stop()
     
-    @dbg.method_speaker_timer('Start gensim pipeline!')
+    @dbg.method_speaker_timer('Gensim pipeline subthread!')
     def start_pipline(self, corpus_iterator, concls, date, save_res_folder):
         self.widgets['TextArea'].prog_bar.start()
         self.switch_clean_buttons('disabled')
