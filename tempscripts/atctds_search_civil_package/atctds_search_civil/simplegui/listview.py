@@ -495,7 +495,10 @@ class ConclsManualInputCTWR(ttk.Frame, CommonInterface):
     def load_entered_text(self):
         text = ''
         for widget in self.inner_txt_widgets:
-            raw_text = widget.inner_get('1.0', 'end-1c')
+            try:
+                raw_text = widget.inner_get('1.0', 'end-1c')
+            except:
+                continue
             raw_text = raw_text.strip()
             if text:
                 if raw_text:

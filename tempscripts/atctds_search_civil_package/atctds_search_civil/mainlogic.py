@@ -68,24 +68,25 @@ class MainLogic(smg.MainFrame):
         self.paths_to_corpus_and_concls = {key:None for key in ('CD', 'CNL')}
         self.save_res_folder = None
         self.start_widget()
-        self.buttons_to_actions()
-        self.print_in(MESSAGES['start_mes'])
-        self.check_start_button_state()
-        self.check_new_session_button_state()
         self.btns = {
             'FB_bca': self.widgets['FileManager'].btn_clean_all,
             'FB_bCD': self.widgets['FileManager'].btn_CD,
             'FB_bcCD': self.widgets['FileManager'].btn_clean_CD,
-            'FB_bCNL': self.widgets['FilaMenager'].btn_CNL,
+            'FB_bCNL': self.widgets['FileManager'].btn_CNL,
             'FB_bcCNL': self.widgets['FileManager'].btn_clean_CNL,
             'FB_bS': self.widgets['FileManager'].btn_Save,
             'FB_bcS': self.widgets['FileManager'].btn_clean_Save,
+            'LV_bM': self.widgets['ListView'].btn_Manual,
             'LV_bca': self.widgets['ListView'].btn_clean_all,
             'DB_bca': self.widgets['DateBox'].btn_clean_all,
             'CB_bSt': self.widgets['ControlButtons'].btn_Start,
             'CB_bca': self.widgets['ControlButtons'].btn_clean_all,
             'TA_bca': self.widgets['TextArea'].btn_clean_all,
         }
+        self.buttons_to_actions()
+        self.print_in(MESSAGES['start_mes'])
+        self.check_start_button_state()
+        self.check_new_session_button_state()
     
     def print_in(self, text):
         self.widgets['TextArea'].btn_clean_all['state'] = 'normal'
@@ -95,13 +96,13 @@ class MainLogic(smg.MainFrame):
         if state != 'normal' and state != 'disabled':
             raise ValueError('Incorrect argument: {}'.format(state))
         for btn in btns:
-            self.btns[btn] = state
+            self.btns[btn]['state'] = state
 
     def check_start_button_state(self):
         if self.concls and self.corpus_iterator and self.date:
-            self.switch_buttons('normal', ('CB_bSt',))
+            self.switch_buttons('normal', 'CB_bSt')
         else:
-            self.switch_buttons('disabled', ('CB_bSt',))
+            self.switch_buttons('disabled', 'CB_bSt')
         self.after(100, self.check_start_button_state)
     
     def check_new_session_button_state(self):
@@ -110,9 +111,9 @@ class MainLogic(smg.MainFrame):
             or self.paths_to_corpus_and_concls['CNL']
             or self.save_res_folder
         ):
-            self.switch_buttons('normal', ('CB_bca',))
+            self.switch_buttons('normal', 'CB_bca')
         else:
-            self.switch_buttons('disabled', ('CB_bca',))
+            self.switch_buttons('disabled', 'CB_bca')
         self.after(100, self.check_new_session_button_state)
                 
     def fill_in_DateBox_with_actual_years(self):
@@ -177,7 +178,7 @@ class MainLogic(smg.MainFrame):
     @dbg.method_speaker_timer('Gensim pipeline subthread!')
     def start_pipline(self, corpus_iterator, concls, date, save_res_folder):
         self.widgets['TextArea'].prog_bar.start()
-        self.switch_clean_buttons('disabled')
+        self.switch_buttons('disabled', *self.btns.keys())
         stpw = rwtools.load_pickle(INTERNAL_PATHS['stpw'])
         current_save_folder = dru.create_save_folder(
             save_res_folder, dbg.strftime('%Y-%m-%d %H-%M')
@@ -203,7 +204,7 @@ class MainLogic(smg.MainFrame):
             file_name = 'Вывод {:0>3d}.txt'.format(ind)
             with open(current_save_folder.joinpath(file_name), mode='w') as f:
                 f.write(res_string)            
-        self.switch_clean_buttons('normal')
+        self.switch_buttons('normal', *self.btns.keys())
         self.widgets['TextArea'].prog_bar.stop()
 #################End of subthreads or subprocesses part
 
