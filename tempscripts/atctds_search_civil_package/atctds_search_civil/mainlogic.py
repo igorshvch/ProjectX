@@ -173,7 +173,7 @@ class MainLogic(smg.MainFrame):
             self.print_in(MESSAGES['concls_found'].format(len(self.concls)))
         self.widgets['ListView'].l_count_var.set(str(len(self.concls)))
         self.widgets['ListView'].lstb_var.set(self.concls)
-        #self.widgets['ListView'].btn_clean_all['state'] = 'normal'
+        self.widgets['ListView'].btn_clean_all['state'] = 'normal'
         self.widgets['TextArea'].prog_bar.stop()
     
     @dbg.method_speaker_timer('Gensim pipeline subthread!')
