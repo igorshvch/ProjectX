@@ -1,3 +1,4 @@
+import sys
 #import multiprocessing as mpc
 import threading as thrd
 import time
@@ -172,7 +173,7 @@ class MainLogic(smg.MainFrame):
             self.print_in(MESSAGES['concls_found'].format(len(self.concls)))
         self.widgets['ListView'].l_count_var.set(str(len(self.concls)))
         self.widgets['ListView'].lstb_var.set(self.concls)
-        self.widgets['ListView'].btn_clean_all['state'] = 'normal'
+        #self.widgets['ListView'].btn_clean_all['state'] = 'normal'
         self.widgets['TextArea'].prog_bar.stop()
     
     @dbg.method_speaker_timer('Gensim pipeline subthread!')
@@ -230,7 +231,11 @@ class MainLogic(smg.MainFrame):
         path = tk_var_val_get()
         if path:
             self.print_in(MESSAGES[mes].format(path))
-            worker = thrd.Thread(target=func, args=(path,))
+            worker = thrd.Thread(
+                target=func,
+                args=(path,),
+                daemon=True
+            )
             worker.start()
             self.paths_to_corpus_and_concls[widget_var] = path
         else:
@@ -254,7 +259,11 @@ class MainLogic(smg.MainFrame):
         path = self.widgets['FileManager'].l_CD_var.get()
         if path:
             self.print_in(MESSAGES['fm_dir'].format(path))
-            worker = thrd.Thread(target=self.process_corpus, args=(path,))
+            worker = thrd.Thread(
+                target=self.process_corpus,
+                args=(path,),
+                daemon=True
+            )
             worker.start()
         else:
             self.print_in(MESSAGES['fm_error'].format(path))
@@ -265,7 +274,11 @@ class MainLogic(smg.MainFrame):
         path = self.widgets['FileManager'].l_CNL_var.get()
         if path:
             self.print_in(MESSAGES['fm_file'].format(path))
-            worker = thrd.Thread(target=self.process_concls, args=(path,))
+            worker = thrd.Thread(
+                target=self.process_concls,
+                args=(path,),
+                daemon=True
+            )
             worker.start()
         else:
             self.print_in(MESSAGES['fm_error'].format(path))
@@ -326,7 +339,8 @@ class MainLogic(smg.MainFrame):
         self.date = None
         worker = thrd.Thread(
             target=self.start_pipline,
-            args=(corpus_iterator, concls, date, save_res_folder)
+            args=(corpus_iterator, concls, date, save_res_folder),
+            daemon=True
         )
         worker.start()
     
@@ -418,6 +432,13 @@ class MainLogic(smg.MainFrame):
 
 
 if __name__ == '__main__':
+    mode = sys.argv[1]
     ml = MainLogic(smg.tk.Tk())
-    ml.start_widget_solo()
+    if mode == '-n':
+        ml.start_widget_solo()
+    elif mode == '-e':
+        print('Experimental mode')
+        ml.start_widget_solo()
+    else:
+        raise NotImplementedError('Mode {} not implemented yet!'.format(mode))
         

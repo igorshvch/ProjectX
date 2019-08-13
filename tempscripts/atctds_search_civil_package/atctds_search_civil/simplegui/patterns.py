@@ -54,6 +54,10 @@ class CommonInterface():
             self.tk_parent.winfo_width(),
             self.tk_parent.winfo_height()
         )
+        self.tk_parent.maxsize(
+            self.tk_parent.winfo_width(),
+            self.tk_parent.winfo_height()
+        )
         self.mainloop()
 
 
