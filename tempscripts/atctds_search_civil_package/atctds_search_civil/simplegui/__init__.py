@@ -8,6 +8,7 @@ from .listview import ListView, ListViewTest
 from .datebox import DateBox, DateBoxTest
 from .textarea import TextArea, TextAreaTest
 from .controlbuttons import ControlButtons
+from .resarea import ResArea
 
 from atctds_search_civil import debugger as dbg
 
@@ -15,10 +16,12 @@ class MainFrame(ttk.Frame, CommonInterface):
     def __init__(self, parent, icon_path=None, **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
         CommonInterface.__init__(self, parent)
+        self.sep_ta = None # ttk.Separator for TextArea widget area
         self.sep_fm = None # ttk.Separator for FileManager widget area
         self.sep_lv = None # ttk.Separator for ListView widget area
-        self.sep_ta = None # ttk.Separator for TextArea widget area
         self.sep_cb = None # ttk.Separator for ControlButtons widget area
+        self.sep_rl = None # ttk.Separator for ResList widget area
+        self.sep_ra = None # ttk.Separator for ResAres widget area
         self.icon_path = icon_path
         
     def initiate_main_widgets(self):
@@ -27,7 +30,8 @@ class MainFrame(ttk.Frame, CommonInterface):
             'ListView': ListView(self),
             'DateBox': DateBox(self),
             'TextArea': TextArea(self),
-            'ControlButtons': ControlButtons(self)
+            'ControlButtons': ControlButtons(self),
+            'ResArea': ResArea(self)
         }
         if self.icon_path:
             self.widgets['ListView'].icon_path = self.icon_path
@@ -36,6 +40,7 @@ class MainFrame(ttk.Frame, CommonInterface):
         self.initiate_main_widgets()
         for widget_name in self.widgets:
             self.widgets[widget_name]['padding'] = (3, 5, 3, 5)
+            #self.widgets[widget_name]['relief'] = 'sunken'
             self.widgets[widget_name].start_widget()
         self.sep_fm = ttk.Separator(
             self,
@@ -53,6 +58,14 @@ class MainFrame(ttk.Frame, CommonInterface):
             self,
             orient='vertical'
         )
+        self.sep_rl = ttk.Separator(
+            self,
+            orient='vertical'
+        )
+        self.sep_ra = ttk.Separator(
+            self,
+            orient='vertical'
+        )
     
     def grid_inner_widgets(self):
         self.widgets['FileManager'].grid(
@@ -61,12 +74,25 @@ class MainFrame(ttk.Frame, CommonInterface):
             columnspan=5,
             sticky='we'
         )
+        #Sep vertical:
+        self.sep_ta.grid(
+            column=5,
+            row=0,
+            #rowspan=2,
+            sticky='wns'
+        )
+        self.widgets['TextArea'].grid(
+            column=6,
+            row=0,
+            #rowspan=3,
+            sticky='nw'
+        )
         #Sep horizontal:
         self.sep_fm.grid(
             column=0,
             row=1,
-            columnspan=5,
-            sticky='wne'
+            columnspan=7,
+            sticky='nwe'
         )
         self.widgets['ListView'].grid(
             column=0,
@@ -74,42 +100,51 @@ class MainFrame(ttk.Frame, CommonInterface):
             columnspan=3,
             sticky='nw'
         )
-        #Sep vertical:
-        self.sep_ta.grid(
-            column=3,
-            row=2,
-            rowspan=3,
-            sticky='wns'
-        )
-        self.widgets['TextArea'].grid(
-            column=4,
-            row=2,
-            rowspan=3,
-            sticky='nw'
-        )
         #Sep horizontal:
         self.sep_lv.grid(
             column=0,
             row=3,
             columnspan=3,
-            sticky='wne'
+            sticky='nwe'
         )
         self.widgets['DateBox'].grid(
             column=0,
             row=4,
-            sticky='nw'
+            sticky='wn'
         )
         #Sep vertical:
         self.sep_cb.grid(
             column=1,
             row=4,
+            rowspan=2,
             sticky='wns'
         )
         self.widgets['ControlButtons'].grid(
             column=2,
             row=4,
-            sticky='nwe'
+            sticky='wn'
         )
+        #Sep vertical:
+        self.sep_rl.grid(
+            column=3,
+            row=2,
+            rowspan=4,
+            sticky='wns'
+        )
+        #Sep vertical:
+        self.sep_ra.grid(
+            column=5,
+            row=2,
+            rowspan=4,
+            sticky='wns'
+        )
+        self.widgets['ResArea'].grid(
+            column=6,
+            row=2,
+            rowspan=4,
+            sticky='nwse'
+        )
+        self.rowconfigure(5, weight=1)
 
 ###############################################################################
 ############################### testing: ######################################
