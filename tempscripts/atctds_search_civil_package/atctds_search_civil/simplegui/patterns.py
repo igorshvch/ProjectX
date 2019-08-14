@@ -180,12 +180,14 @@ class CustomTextWidgetRu(ttk.Frame, CommonInterface):
     def grid_inner_widgets(self):
         if self.label_text:
             self.label.grid(column=0, row=0, sticky='we')
-        self.txt.grid(column=0, row=1, sticky='nw')
+        self.txt.grid(column=0, row=1, sticky='nwse')
         self.scrol_y.grid(column=1, row=1, sticky='nws')
         if self.scrol_x_flag:
             self.scrol_x.grid(column=0, row=2, sticky='wne')
         if self.btn_flag:
             self.btn_clean_all.grid(column=0, row=3, sticky='nw')
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
 
 
 if __name__ == '__main__':

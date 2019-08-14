@@ -12,7 +12,7 @@ class ListView(ttk.Frame, CommonInterface):
     def __init__(self, parent, icon_path=None, sep=' / ', **kwargs):
         ttk.Frame.__init__(self, parent, **kwargs)
         CommonInterface.__init__(self, parent)
-        self.label_scrl = None #label
+        self.label_lstb = None #label
         self.btn_FromFile = None
         self.btn_Manual = None
         self.lstb = None #tk.Listbox
@@ -67,7 +67,7 @@ class ListView(ttk.Frame, CommonInterface):
         self.btn_clean_all['state'] = 'disabled'
 
     def build_widgets(self):
-        self.lb_scrl = ttk.Label(
+        self.label_lstb = ttk.Label(
             self,
             text='Список кирпичей (выводов или позиций)',
             anchor='center',
@@ -116,9 +116,8 @@ class ListView(ttk.Frame, CommonInterface):
         )
         self.label_count1 = ttk.Label(
             self,
-            text='Всего кирпичей:',
+            text='Всего кирпичей: ',
             anchor='e',
-            relief='flat'
         )
         self.label_count2 = ttk.Label(
             self,
@@ -133,15 +132,16 @@ class ListView(ttk.Frame, CommonInterface):
         }
     
     def grid_inner_widgets(self):
-        self.lb_scrl.grid(column=0, row=0, columnspan=4, sticky='we')
+        self.label_lstb.grid(column=0, row=0, columnspan=3, sticky='we')
         #self.btn_FromFile.grid(column=0, row=1, columnspan=2, sticky='e')
-        self.btn_Manual.grid(column=0, row=1, columnspan=4, sticky='we')
-        self.lstb.grid(column=0, row=2, columnspan=4, sticky='we')
-        self.scrl_y.grid(column=4, row=2, sticky='nws')
-        self.scrl_x.grid(column=0, row=3, columnspan=4, sticky='enw')
+        self.btn_Manual.grid(column=0, row=1, columnspan=3, sticky='we')
+        self.lstb.grid(column=0, row=2, columnspan=3, sticky='we')
+        self.scrl_y.grid(column=3, row=2, sticky='nws')
+        self.scrl_x.grid(column=0, row=3, columnspan=3, sticky='enw')
         self.btn_clean_all.grid(column=0, row=4, sticky='w')
-        self.label_count1.grid(column=1, row=4, columnspan=2, sticky='e')
-        self.label_count2.grid(column=3, row=4, sticky='e')
+        self.label_count1.grid(column=1, row=4, sticky='e')
+        self.label_count2.grid(column=2, row=4, sticky='e')
+        self.columnconfigure(0, weight=1)
 
 
 class ConclsManualInput(ttk.Frame, CommonInterface):

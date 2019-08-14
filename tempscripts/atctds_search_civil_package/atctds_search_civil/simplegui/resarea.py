@@ -1,5 +1,4 @@
 import tkinter as tk
-import tkinter.scrolledtext as tkst
 from tkinter import ttk
 
 from atctds_search_civil import debugger as dbg
@@ -21,7 +20,7 @@ class ResArea(ttk.Frame, CommonInterface):
         self.notebook = ttk.Notebook(self)
         self.tab_00 = CustomTextWidgetRu(
             self.notebook,
-            t_width=90,
+            #t_width=90,
             t_height=40
         )
         self.tab_01 = ttk.Frame(self.notebook)
@@ -32,12 +31,15 @@ class ResArea(ttk.Frame, CommonInterface):
         )
         self.notebook.add(
             self.tab_01,
-            text='Оценка найденных актов'
+            text='Оценка найденных актов',
+            state='disabled'
         )
     
     def grid_inner_widgets(self):
         self.tab_00.start_widget()
-        self.notebook.grid(column=0, row=0, sticky='wnse')
+        self.notebook.grid(column=0, row=0, sticky='wnes')
         #self.content_01_results_list.grid(column=0, row=0, sticky='nwse')
         #self.tab_00.grid(column=0, row=0, sticky='wnse')
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
 

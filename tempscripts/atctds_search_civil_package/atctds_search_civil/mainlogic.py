@@ -431,14 +431,34 @@ class MainLogic(smg.MainFrame):
         )
 
 
+###############################################################################
+############################### testing: ######################################
+###############################################################################
+
+class OnlyGUI(smg.MainFrame):
+    def __init__(self, parent):
+        parent.title('Автоматический добор судебной практики для ПСП')
+        parent.iconbitmap(INTERNAL_PATHS['icon']())
+        smg.MainFrame.__init__(
+            self,
+            parent,
+            icon_path=INTERNAL_PATHS['icon']()
+        )
+        self.start_widget()
+
 if __name__ == '__main__':
     mode = sys.argv[1]
-    ml = MainLogic(smg.tk.Tk())
     if mode == '-n':
+        ml = MainLogic(smg.tk.Tk())
         ml.start_widget_solo()
     elif mode == '-e':
         print('Experimental mode')
+        ml = MainLogic(smg.tk.Tk())
         ml.start_widget_solo()
+    elif mode=='-g':
+        print('GIU debugging')
+        ogui = OnlyGUI(smg.tk.Tk())
+        ogui.start_widget_solo()
     else:
         raise NotImplementedError('Mode {} not implemented yet!'.format(mode))
         

@@ -9,6 +9,7 @@ from .datebox import DateBox, DateBoxTest
 from .textarea import TextArea, TextAreaTest
 from .controlbuttons import ControlButtons
 from .resarea import ResArea
+from .reslist import ResList
 
 from atctds_search_civil import debugger as dbg
 
@@ -20,8 +21,8 @@ class MainFrame(ttk.Frame, CommonInterface):
         self.sep_fm = None # ttk.Separator for FileManager widget area
         self.sep_lv = None # ttk.Separator for ListView widget area
         self.sep_cb = None # ttk.Separator for ControlButtons widget area
+        self.sep_lp = None # ttk.Separator for left panel
         self.sep_rl = None # ttk.Separator for ResList widget area
-        self.sep_ra = None # ttk.Separator for ResAres widget area
         self.icon_path = icon_path
         
     def initiate_main_widgets(self):
@@ -31,6 +32,7 @@ class MainFrame(ttk.Frame, CommonInterface):
             'DateBox': DateBox(self),
             'TextArea': TextArea(self),
             'ControlButtons': ControlButtons(self),
+            'ResList': ResList(self),
             'ResArea': ResArea(self)
         }
         if self.icon_path:
@@ -58,11 +60,11 @@ class MainFrame(ttk.Frame, CommonInterface):
             self,
             orient='vertical'
         )
-        self.sep_rl = ttk.Separator(
+        self.sep_lp = ttk.Separator(
             self,
-            orient='vertical'
+            orient='horizontal'
         )
-        self.sep_ra = ttk.Separator(
+        self.sep_rl = ttk.Separator(
             self,
             orient='vertical'
         )
@@ -72,7 +74,7 @@ class MainFrame(ttk.Frame, CommonInterface):
             column=0,
             row=0,
             columnspan=5,
-            sticky='we'
+            sticky='nwe'
         )
         #Sep vertical:
         self.sep_ta.grid(
@@ -116,7 +118,7 @@ class MainFrame(ttk.Frame, CommonInterface):
         self.sep_cb.grid(
             column=1,
             row=4,
-            rowspan=2,
+            #rowspan=2,
             sticky='wns'
         )
         self.widgets['ControlButtons'].grid(
@@ -124,27 +126,35 @@ class MainFrame(ttk.Frame, CommonInterface):
             row=4,
             sticky='wn'
         )
+        #Sep horiaontal:
+        self.sep_lp.grid(
+            column=0,
+            row=5,
+            columnspan=3,
+            sticky='nwe'
+        )
+        self.widgets['ResList'].grid(
+            column=0,
+            row=6,
+            columnspan=3,
+            sticky='nw'
+        )
         #Sep vertical:
         self.sep_rl.grid(
             column=3,
             row=2,
-            rowspan=4,
-            sticky='wns'
-        )
-        #Sep vertical:
-        self.sep_ra.grid(
-            column=5,
-            row=2,
-            rowspan=4,
+            rowspan=6,
             sticky='wns'
         )
         self.widgets['ResArea'].grid(
-            column=6,
+            column=4,
             row=2,
-            rowspan=4,
+            columnspan=3,
+            rowspan=6,
             sticky='nwse'
         )
-        self.rowconfigure(5, weight=1)
+        self.rowconfigure(7, weight=1)
+        self.columnconfigure(4, weight=1)
 
 ###############################################################################
 ############################### testing: ######################################

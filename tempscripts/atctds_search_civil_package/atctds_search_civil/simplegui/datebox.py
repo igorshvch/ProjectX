@@ -111,7 +111,7 @@ class DateBox(ttk.Frame, CommonInterface):
         #header and hint widgets:
         self.label_head = ttk.Label(
             self,
-            text='Выберите дату',
+            text='Выберите дату:',
             width=13,
             anchor='center'
         )

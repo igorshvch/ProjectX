@@ -41,7 +41,7 @@ class TextArea(ttk.Frame, CommonInterface):
             self,
             state='disabled',
             width=90,
-            height=5
+            height=3
         )
         self.scrl = ttk.Scrollbar(
             self,
