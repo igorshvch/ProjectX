@@ -38,10 +38,11 @@ class MyReader():
         buffer = self.file.buffer
         buffer.seek(0)
         last_position = start_pos = 0
+        pde = bytes(pattern_doc_end, encoding=codec)
         while True:
-            line = buffer.readline().decode(codec)
+            line = buffer.readline()
             current_position = buffer.tell()
-            if re.match(pattern_doc_end, line):
+            if re.match(pde, line):
                 end_pos = current_position
                 self.docs_poses.append((start_pos, end_pos))
                 start_pos = end_pos
@@ -89,21 +90,25 @@ class MyReaderEndDate(MyReader):
         buffer = self.file.buffer
         buffer.seek(0)
         last_position = -1
+        pd = bytes(pattern_date, encoding=codec)
+        pds = bytes(pattern_doc_start, encoding=codec)
+        pde = bytes(pattern_doc_end, encoding=codec)
+        bdot = bytes('.', encoding=codec)
         while True:
-            line = buffer.readline().decode(codec)
+            line = buffer.readline()
             current_position = buffer.tell()
-            if re.match(pattern_date, line):
-                d = buffer.readline().decode(codec)[:-1].split('.')
+            if re.match(pd, line):
+                d = buffer.readline()[:-1].split(bdot)
                 d = date(int(d[2]), int(d[1]), int(d[0]))
                 dates_to_poses.setdefault(d, []).append(
                     len(dates_poses)
                 )
                 dates_poses.append(current_position)
                 continue
-            elif re.match(pattern_doc_start, line):
+            elif re.match(pds, line):
                 start_pos = current_position
                 continue
-            elif re.match(pattern_doc_end, line):
+            elif re.match(pde, line):
                 end_pos = current_position
                 dates_to_docs.setdefault(d, []).append(
                     len(docs_poses)
