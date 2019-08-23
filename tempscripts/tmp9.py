@@ -18,20 +18,9 @@ def read_text(filepath, patterns):
     return store
 
 
-class MyReader():
-    '''
-    Class defines interface to file's contents.
-    It provides methodes to iterate over documents
-    which were previously write to one .txt file.
-    Delimiters between documents can be set manually
-    '''
-    def __init__(self, file, patterns=None, codec='cp1251'):
-        self.file_size = file.seek(0, 2)
-        file.seek(0)
-        self.file = file
-        self.codec = codec
-        self.patterns = patterns # iterable with strings
-        self.store = None #dict with posese
+class MyReaderBase():
+    def __init__(self, *args, **kwargs):
+        self.store = {}
     
     def __len__(self):
         if self.store:
@@ -44,16 +33,95 @@ class MyReader():
     
     def __getitem__(self, index):
         return self.find_doc(index)
+
+    def find_doc(self, index):
+        '''
+        Dummy method for overall consistency
+        '''
+        return None
+
+
+class MyReader(MyReaderBase):
+    '''
+    Class defines interface to file's contents.
+    It provides methodes to iterate over documents
+    which were previously write to one .txt file.
+    Delimiters between documents can be set manually
+    '''
+    def __init__(self,
+                 file,
+                 *args,
+                 patterns=None,
+                 codec='cp1251',
+                 mode='text',
+                 **kwargs):
+        MyReaderBase.__init__(self, *args, **kwargs)
+        self.file_size = file.seek(0, 2)
+        file.seek(0)
+        self.file = file
+        self.codec = codec
+        self.patterns = patterns #iterable with strings
+        self.mode = mode #specify class iterator function
+        self.store = None #dict with posese
+        self.marks = {} #dict with keys equiualent to patterns names
+        self.modes = None
+        self.current_mode = mode
+        self.inspect_corpus()
     
-    def find_docs(self):
-        end_mark = self.file.seek(0,2)
+    def __define_marks(self, store):
+        holder = [(key, val[0]) for key, val in store.items()]
+        holder = sorted(holder, key=lambda x: x[1])
+        self.marks['text_stop'] = holder.pop()[0]
+        the_first_key = holder[0][0]
+        the_penult_key = holder[-2][0]
+        the_last_key = holder[-1][0]
+        self.marks['text_start'] = the_last_key
+        self.marks[the_first_key+'_start'] = the_first_key
+        for i in range(1, len(holder)-1):
+            key = holder[i][0]
+            self.marks[key+'_stop'] = key
+            self.marks[key+'_start'] = key
+        self.marks[the_penult_key+'_stop'] = the_last_key
+    
+    def __construct_find_doc_func(self, mode):
+        def compaund():
+            find_text = self.find_doc_text()
+            find_meta = self.find_doc_meta(
+                meta=list(range(len(self.patterns)))
+            )
+            def inner_func(index):
+                meta = find_meta(index)
+                text = find_text(index)
+                return '\n'.join(meta)+'\n\n'+text
+            return inner_func
+        self.modes = {
+            'text': self.find_doc_text(),
+            'meta': self.find_doc_meta(
+                meta=list(range(len(self.patterns)))
+            ),
+            'meta_n_text': compaund()
+        }
+        self.find_doc = self.modes[mode]
+    
+    def switch_mode(self, mode):
+        if mode not in self.modes:
+            raise ValueError('incorrect mode name entered!')
+        self.find_doc = self.modes[mode]
+        self.current_mode = mode
+    
+    def inspect_corpus(self):
+        '''
+        Method finds all docs and meta for text files from
+        "КонсультантПлюс" loaded corpus
+        '''
+        EOF = self.file.seek(0,2)
         self.file.seek(0)
         buffer = self.file.buffer
         bpatterns = set((bytes(p, encoding=self.codec) for p in self.patterns))
         store = {p:[] for p in bpatterns}
         for bline in buffer:
             position = buffer.tell()
-            if position == end_mark:
+            if position == EOF:
                 break
             for bpattern in bpatterns:
                 if re.match(bpattern, bline):
@@ -64,20 +132,53 @@ class MyReader():
             for p in self.patterns
         }
         self.store = new_store
+        self.__define_marks(new_store)
+        self.__construct_find_doc_func(mode=self.current_mode)
 
-    def find_doc(self, index):
-        if index > len(self)-1:
-            raise IndexError()
-        store = self.store
-        poses = sorted([store[key][index] for key in store])
+    def find_doc_text(self):
+        text_start_list = self.store[self.marks['text_start']]
+        text_stop_list = self.store[self.marks['text_stop']]
         buffer = self.file.buffer
-        start = poses[-2]
-        stop = poses[-1]
-        buffer.seek(start)
-        doc_b = buffer.read(stop-start)
-        text = doc_b.decode(self.codec)[2:-74]
-        return text
+        codec = self.codec
+        def inner_func(index):
+            start = text_start_list[index]
+            stop = text_stop_list[index]
+            buffer.seek(start)
+            doc_b = buffer.read(stop-start)
+            text = doc_b.decode(codec)[2:-74]
+            return text
+        return inner_func
 
+    def find_doc_meta(self, meta=(0,)):
+        marks = []
+        store = self.store
+        buffer = self.file.buffer
+        codec = self.codec
+        delim = bytes('\n', encoding=codec)
+        for i in meta:
+            start_mark = self.marks.get(self.patterns[i]+'_start')
+            if not start_mark:
+                continue
+            stop_mark = self.marks.get(self.patterns[i]+'_stop')
+            marks.append((start_mark, stop_mark))
+        def inner_func(index):
+            holder = []
+            for mark_pair in marks:
+                start = store[mark_pair[0]][index]
+                stop = store[mark_pair[1]][index]
+                buffer.seek(start)
+                meta_b = buffer.read(stop-start)
+                meta_b = delim.join(meta_b.split(delim)[:-2])
+                meta = meta_b.decode(codec).strip()
+                holder.append(meta)
+            return holder
+        return inner_func      
+
+    def show_patterns(self):
+        print('{: >10s}|\t{: >50s}'.format('Num', 'Patterns'))
+        print('{:->10s}|-----{:->50s}'.format('',''))
+        for ind, p in enumerate(self.patterns):
+            print('{: >10d}|\t{: >50s}'.format(ind, p))
 
 
 
