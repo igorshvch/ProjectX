@@ -83,23 +83,24 @@ class MyReader(MyReaderBase):
             self.marks[key+'_start'] = key
         self.marks[the_penult_key+'_stop'] = the_last_key
     
+    def __find_compaund_factory(self):
+        find_text = self.__find_doc_text_factory()
+        find_meta = self.__find_doc_meta_factory(
+            meta_num=list(range(len(self.patterns)))
+        )
+        def inner_func(index):
+            common_store = find_meta(index)
+            common_store['Текст'] = find_text(index)
+            return common_store
+        return inner_func
+    
     def __construct_find_doc_func(self, mode):
-        def compaund():
-            find_text = self.find_doc_text()
-            find_meta = self.find_doc_meta(
-                meta=list(range(len(self.patterns)))
-            )
-            def inner_func(index):
-                meta = find_meta(index)
-                text = find_text(index)
-                return '\n'.join(meta)+'\n\n'+text
-            return inner_func
         self.modes = {
-            'text': self.find_doc_text(),
-            'meta': self.find_doc_meta(
-                meta=list(range(len(self.patterns)))
+            'text': self.__find_doc_text_factory(),
+            'meta': self.__find_doc_meta_factory(
+                meta_num=list(range(len(self.patterns)))
             ),
-            'meta_n_text': compaund()
+            'meta_n_text': self.__find_compaund_factory()
         }
         self.find_doc = self.modes[mode]
     
@@ -135,7 +136,7 @@ class MyReader(MyReaderBase):
         self.__define_marks(new_store)
         self.__construct_find_doc_func(mode=self.current_mode)
 
-    def find_doc_text(self):
+    def __find_doc_text_factory(self):
         text_start_list = self.store[self.marks['text_start']]
         text_stop_list = self.store[self.marks['text_stop']]
         buffer = self.file.buffer
@@ -149,36 +150,47 @@ class MyReader(MyReaderBase):
             return text
         return inner_func
 
-    def find_doc_meta(self, meta=(0,)):
+    def __find_doc_meta_factory(self, meta_num=(0,)):
         marks = []
+        meta_keys = []
         store = self.store
         buffer = self.file.buffer
         codec = self.codec
         delim = bytes('\n', encoding=codec)
-        for i in meta:
-            start_mark = self.marks.get(self.patterns[i]+'_start')
+        for i in meta_num:
+            pattern = self.patterns[i]
+            start_mark = self.marks.get(pattern+'_start')
             if not start_mark:
                 continue
-            stop_mark = self.marks.get(self.patterns[i]+'_stop')
+            stop_mark = self.marks.get(pattern+'_stop')
             marks.append((start_mark, stop_mark))
+            meta_keys.append(re.match(r'[А-Яа-я0-9 ]+', pattern).group())
         def inner_func(index):
-            holder = []
-            for mark_pair in marks:
+            inner_store = {}
+            for mark_pair, meta_key in zip(marks, meta_keys):
                 start = store[mark_pair[0]][index]
                 stop = store[mark_pair[1]][index]
                 buffer.seek(start)
                 meta_b = buffer.read(stop-start)
                 meta_b = delim.join(meta_b.split(delim)[:-2])
                 meta = meta_b.decode(codec).strip()
-                holder.append(meta)
-            return holder
-        return inner_func      
+                inner_store[meta_key] = meta
+            return inner_store
+        return inner_func
 
-    def show_patterns(self):
-        print('{: >10s}|\t{: >50s}'.format('Num', 'Patterns'))
+    def find_meta(self, index, meta_num=(0,)):
+        return self.__find_doc_meta_factory(meta_num=meta_num)(index)
+    
+    def find_full_info(self, index):
+        return self.__find_compaund_factory()(index)
+
+    def show_meta_tags(self):
+        print('{: >10s}|\t{: >50s}'.format('Meta num', 'Patterns'))
         print('{:->10s}|-----{:->50s}'.format('',''))
         for ind, p in enumerate(self.patterns):
-            print('{: >10d}|\t{: >50s}'.format(ind, p))
+            if p+'_start' in self.marks:
+                res = re.match(r'[А-Яа-я0-9 ]+', p).group()
+                print('{: >10d}|\t{: >50s}'.format(ind, res))
 
 
 
