@@ -1,9 +1,11 @@
 import sys
 import re
 import csv
+import pathlib as pthl
 from datetime import date
 
 import iopickler as iop
+from textproc import rwtools
 
 
 def string_to_date(string):
@@ -22,11 +24,11 @@ def string_to_date(string):
 
 data_trans_funcs = {
     'comas_to_newlines': lambda x: re.subn(r',(?=[\w\n-])', '\n', x)[0],
-    'find_act_content': lambda x: re.search(
-        r'(?<=\nустановил:\n).*(?=\nПредседательствующий|\nПредседательствующий судья)',
-        x,
-        flags=re.DOTALL
-    ).group(),
+    #'find_act_content': lambda x: re.search(
+    #    r'(?<=\nустановил:\n).*(?=\nПредседательствующий|\nПредседательствующий судья)',
+    #    x,
+    #    flags=re.DOTALL
+    #).group(),
     'string_to_date': lambda x: string_to_date(x),
     'separate_act_ids': lambda x: set(x.split(',')),
     'court': lambda x: x.split('_')[0],
@@ -35,19 +37,20 @@ data_trans_funcs = {
 
 def custom_processor_for_ConsPlus_data(dct):
     req_name = dct['Название документа']
-    if req_name[:6] != 'Постан':
-        return None
+    #if req_name[:6] == 'Постан':
     name, sinopsis = data_trans_funcs['sinopsis'](req_name)
     dct['Название документа'] = name
     dct['Описание'] = sinopsis
+    #else:
+    #    dct['Описание'] = rew_name
     text = dct['Текст документа']
     comas_to_newlines = data_trans_funcs['comas_to_newlines'](text)
     dct['Текст документа'] = comas_to_newlines
-    try:
-        content = data_trans_funcs['find_act_content'](comas_to_newlines)
-    except:
-        content = None
-    dct['Содержание'] = content
+    #try:
+    #    content = data_trans_funcs['find_act_content'](comas_to_newlines)
+    #except:
+    #    content = None
+    #dct['Содержание'] = content
     date_loading = dct['Когда получен']
     dct['Когда получен'] = data_trans_funcs['string_to_date'](date_loading)
     date_issue = dct['Дата']
@@ -61,17 +64,41 @@ def custom_processor_for_ConsPlus_data(dct):
     dct['Принявший орган'] = data_trans_funcs['court'](req_court)
     return dct
 
-def inspect_corpus(file,
-                   iop_obj=iop.IOPickler(),
-                   process_func=custom_processor_for_ConsPlus_data):
-    reader = csv.DictReader(file, delimiter=';')
-    for row in reader:
-        if process_func:
-            row = process_func(row)
-            if not row:
-                continue
-        iop_obj.append(row)
-    return iop_obj
+class MyReaderCSV():
+    def __init__(self, p_file=None):
+        if p_file:
+            path = p_file.parent
+            name = p_file.stem
+            file_dates = rwtools.create_new_binary(name+'_dates', path)
+            file_docreq = rwtools.create_new_binary(name+'_docreqs', path)
+            self.doc_store = iop.IOPickler(file=p_file)
+            self.date_holder = iop.IOPickler(file=file_dates)
+            self.docreq_holer = iop.IOPickler(file=file_docreq)
+        else:
+            self.doc_store = iop.IOPickler()
+            self.date_holder = iop.IOPickler()
+            self.docreq_holer = iop.IOPickler()
+            print('Using tempfiles')
+        self.dates_loading = dict()
+        self.dates_issue = dict()
+        self.docreqs = dict()
+        self.names = dict()
+    
+    def inspect_corpus(self,
+                       file,
+                       process_func=custom_processor_for_ConsPlus_data):
+        reader = csv.DictReader(file, delimiter=';')
+        for ind, row in enumerate(reader):
+            if process_func:
+                row = process_func(row)
+            self.doc_store.append(row)
+            for date in row['Когда получен']:
+                self.dates_loading.setdefault(date, []).append(ind)
+            for date in row['Дата']:
+                self.dates_issue.setdefault(date, []).append(ind)
+            for req in row['Номер']:
+                self.docreqs.setdefault(req, []).append(ind)
+            self.names.setdefault(row['Название документа'], []).append(ind)
 
 
 if __name__ == '__main__':
