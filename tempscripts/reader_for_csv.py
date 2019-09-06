@@ -1,27 +1,28 @@
 import re
 import csv
+import tempfile
 import pathlib as pthl
 import pickle as pkl
 from datetime import date
 
-import iopickler as iop
+from tempscripts import iopickler as iop
 from textproc import rwtools
 from guidialogs import ffp, fdp
 
 
 def string_to_date(string):
-    res_set = set()
+    ddates = []
     if ',' in string:
         dates = string.split(',')
         for item in dates:
             parts = item.split('.')
             ddate = date(int(parts[2]), int(parts[1]), int(parts[0]))
-            res_set.add(ddate)
+            ddates.append(ddate)
+        return max(ddates)
     else:
         parts = string.split('.')
         ddate = date(int(parts[2]), int(parts[1]), int(parts[0]))
-        res_set.add(ddate)
-    return res_set
+        return ddate
 
 data_trans_funcs = {
     'comas_to_newlines': lambda x: re.subn(r',(?=[\w\n-])', '\n', x)[0],
@@ -36,9 +37,10 @@ data_trans_funcs = {
     'sinopsis': lambda x: re.split(r',(?=[\w\n-()])', x, maxsplit=1)
 }
 
-def custom_processor_for_ConsPlus_data(dct):
+def custom_processor_for_ConsPlus_data(counter, dct):
     req_name = dct['Название документа']
-    #if req_name[:6] == 'Постан':
+    if req_name[:6] != 'Постан':
+        return counter, None
     name, sinopsis = data_trans_funcs['sinopsis'](req_name)
     dct['Название документа'] = name
     dct['Описание'] = sinopsis
@@ -63,19 +65,23 @@ def custom_processor_for_ConsPlus_data(dct):
     except:
         req_court = dct['Судья']
     dct['Принявший орган'] = data_trans_funcs['court'](req_court)
-    return dct
+    counter += 1
+    return counter, dct
 
 def inspect_corpus(file,
-                   iop_obj=iop.IOPickler(),
+                   iop_obj=None,
                    process_func=custom_processor_for_ConsPlus_data):
+    if not iop_obj:
+        iop_obj = iop.IOPickler()
     reader = csv.DictReader(file, delimiter=';')
     for row in reader:
         if process_func:
-            row = process_func(row)
+            _, row = process_func(0, row)
             if not row:
                 continue
         iop_obj.append(row)
     return iop_obj
+
 
 class MyReaderCSV_Base():
     def __init__(self):
@@ -84,13 +90,10 @@ class MyReaderCSV_Base():
         self.dates_issue = dict()
         self.docreqs = dict()
         self.names = dict()
+        self.dates_info = dict()
     
     def __len__(self):
-        store_names = self.names
-        counter = 0
-        for name in store_names:
-            counter += len(store_names[name])
-        return counter
+        return len(self.doc_store)
 
     def __getitem__(self, index):
         return self.doc_store[index]
@@ -106,8 +109,7 @@ class MyReaderCSV(MyReaderCSV_Base):
         if p_file:
             self.doc_store = iop.IOPickler(file=p_file)
         else:
-            self.doc_store = iop.IOPickler()
-            print('Using tempfiles')
+            self.doc_store = iop.IOPickler(file=tempfile.TemporaryFile())
         ##########
         if source:
             self.inspect_corpus(source)
@@ -116,18 +118,25 @@ class MyReaderCSV(MyReaderCSV_Base):
                        source,
                        index_start=0,
                        process_func=custom_processor_for_ConsPlus_data):
+        counter = index_start
         reader = csv.DictReader(source, delimiter=';')
-        for ind, row in enumerate(reader, start=index_start):
+        for row in reader:
             if process_func:
-                row = process_func(row)
+                counter, row = process_func(counter, row)
+                if not row:
+                    continue 
             self.doc_store.append(row)
-            for date in row['Когда получен']:
-                self.dates_loading.setdefault(date, []).append(ind)
-            date = max(row['Дата'])
-            self.dates_issue.setdefault(date, []).append(ind)
+            date_l = row['Когда получен']
+            self.dates_loading.setdefault(date_l, []).append(counter)
+            date_i = row['Дата']
+            self.dates_issue.setdefault(date_i, []).append(counter)
             for req in row['Номер']:
-                self.docreqs.setdefault(req, []).append(ind)
-            self.names.setdefault(row['Название документа'], []).append(ind)
+                self.docreqs.setdefault(req, []).append(counter)
+            self.names.setdefault(row['Название документа'], []).append(counter)
+        self.dates_info['loading_max'] = max(self.dates_loading.keys())
+        self.dates_info['loading_min'] = min(self.dates_loading.keys())
+        self.dates_info['issue_max'] = max(self.dates_issue.keys())
+        self.dates_info['issue_min'] = min(self.dates_issue.keys())
         source.close()
         self.source = source.name
     
@@ -160,8 +169,8 @@ class MyReaderCSV(MyReaderCSV_Base):
                         yield self[ind]
             else:
                 raise KeyError('"{}" name not found'.format(name))
-    
 
+ 
 class MyReaderCSV_testing(MyReaderCSV):
     def print_stats(self):
         import random as rd
@@ -175,7 +184,9 @@ class MyReaderCSV_testing(MyReaderCSV):
         print('-'*101)
         print('Corpus information:')
         print('\tCorpus source:')
-        print('\t\t{}'.format(self.source.name))
+        print('\t\t{}'.format(self.source))
+        print('\tCorpus underlay:')
+        print('\t\t{}'.format(self.doc_store.file_name))
         print('\tCorpus length:')
         print('\t\t{} documents in total'.format(length))
         print('-'*101)
@@ -202,11 +213,13 @@ class MyReaderCSV_testing(MyReaderCSV):
 class CommonReader_Base():
     def __init__(self):
         self.readers = dict()
+        self.dates_info = dict()
+        self.index = []
     
     def __len__(self):
         if not self.readers:
             print('None readers found!')
-            return None
+            return 0
         counter = 0
         for key in self.readers:
             counter += len(self.readers[key])
@@ -218,18 +231,37 @@ class CommonReader_Base():
             return None
         for key in sorted(self.readers.keys()):
             yield from self.readers[key]
+    
+    def __getitem__(self, index):
+        key, index = self.index[index]
+        return self.readers[key][index]
+
 
 
 class CommonReader(CommonReader_Base):
     def __init__(self, folder):
         CommonReader_Base.__init__(self)
-        self.folder = folder    
+        self.folder = folder
+    
+    def __find_dates_range(self, mode='loading'):
+        dates_max = []
+        dates_min = []
+        for key in self.readers:
+            dates_max.append(self.readers[key].dates_info[mode+'_max'])
+            dates_min.append(self.readers[key].dates_info[mode+'_min'])
+        self.dates_info[mode+'_max'] = max(dates_max)
+        self.dates_info[mode+'_min'] = min(dates_min)
+    
+    def __create_total_index(self):
+        for key in sorted(self.readers.keys()):
+            for i in range(len(self.readers[key])):
+                self.index.append((key, i))
     
     def create_readers(self):
         fp = rwtools.collect_exist_files(self.folder, suffix='.csv')
         for path in sorted(fp):
-            name = path.stem
             source = open(path, mode='r', newline='')
+            name = path.stem
             if name in self.readers:
                 ind_start = len(self.readers[name])
                 self.readers[name].inspect_corpus(
@@ -238,6 +270,9 @@ class CommonReader(CommonReader_Base):
                 )
             else:
                 self.readers[name] = MyReaderCSV(source=source)
+        self.__create_total_index()
+        self.__find_dates_range(mode='loading')
+        self.__find_dates_range(mode='issue')
     
     def find_by_date(self, date_obj, mode='loading'):
         for key in sorted(self.readers.keys()):
@@ -280,6 +315,7 @@ if __name__ == '__main__':
             )
         )
     elif mode == '-p':
+        summa = 0
         fp = rwtools.collect_exist_files(fdp(), suffix='.csv')
         time1 = time()
         for ind, path in enumerate(fp):
@@ -293,9 +329,12 @@ if __name__ == '__main__':
                     data = str(data).replace('\n', '##')
                     if len(data)>45:
                         data = data[:45]+'...'
-                print('OK')
+                length = len(iop_obj)
+                print('OK;', 'acts in total: {}'.format(length))
+                summa += length
         time2 = time()
         time_res = time2-time1
+        print('Corpus contains {} acts'.format(summa))
         print('time: {: >7.3f} min ({: >7.3f} sec)'.format(
                 time_res/60, time_res
             )
@@ -319,6 +358,7 @@ if __name__ == '__main__':
         cr.create_readers()
         time2 = time()
         time_res = time2-time1
+        print('Documents in total: {}'.format(len(cr)))
         print('time: {: >7.3f} min ({: >7.3f} sec)'.format(
                 time_res/60, time_res
             )
@@ -328,4 +368,3 @@ if __name__ == '__main__':
             'Mode arg error! Please type correct mode arg:',
             '-s for single mode, -p for pipline mode'
         )
-

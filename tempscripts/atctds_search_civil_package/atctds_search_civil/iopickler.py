@@ -7,8 +7,11 @@ class IOPickler():
     '''
     Create interface to file with pickled python objects
     '''
-    def __init__(self, file = tempfile.TemporaryFile()):
-        self.file = file
+    def __init__(self, file=None):
+        if not file:
+            self.file = tempfile.TemporaryFile()
+        else:
+            self.file = file
         self.indexer = []
         self.file_name = file.name
         self.create_index()

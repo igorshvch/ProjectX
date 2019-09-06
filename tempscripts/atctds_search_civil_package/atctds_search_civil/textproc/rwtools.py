@@ -92,9 +92,9 @@ def save_pickle(py_obj, path):
                     file_name,
                     protocol=pickle.HIGHEST_PROTOCOL)
         
-def load_pickle(path):
+def load_pickle(path, mode='rb'):
     import pickle
-    with open(path, 'rb') as fle:
+    with open(path, mode=mode) as fle:
         data = pickle.load(fle)
     return data            
 
