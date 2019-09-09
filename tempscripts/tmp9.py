@@ -1,102 +1,59 @@
 import re
-from time import strftime
 
-from textproc import rwtools
-from tempscripts import iopickler as iop
+import pymorphy2
 
-dt_stamp = '%Y-%m-%d#%a#%H-%M-%S'
+morph = pymorphy2.MorphAnalyzer()
+parse = morph.parse
 
-class DictWithTokens():
-    def __init__(self, folder):
-        self.dictionaries = {
-            'token_nf': dict(),
-            'token_tag': dict(),
-            'tag_token': dict(),
-            'tag_nf': dict(),
-            'nf_token': dict(),
-            'nf_tag': dict()
-        }
-        self.folder = folder
-        self.save_files = dict()
-        self.files_created_flag = False
-        self.files_loaded_flag = False
-    
-    def __getattr__(self, name):
-        if name in (
+def process_corpus(doc_store, iop_obj):
+    cd = CashDicts()
+    ws = set() 
+    for doc in doc_store:
+        doc = doc['Текст документа']
+        tl, ws = tokenize(doc, ws)
+        iop_obj.append(tl)
+    for word in ws:
+        nf, tag = parser(word)
+        cd.fill_dicts(word, nf, tag)
+    return cd
+
+def tokenize(doc, tokens_set):
+    doc = doc.lower()
+    tokens_list = re.findall(r'\b[а-я0-9][а-я0-9-]*', doc)
+    tokens_set |= set(tokens_list)
+    return tokens_list, tokens_set
+
+def parser(word):
+    word_meta = parse(word)[0]
+    normal_form = word_meta.normal_form
+    POS_tag = str(word_meta.tag.POS)
+    return normal_form, POS_tag
+
+class CashDicts():
+    def __init__(self):
+        self.__dict_names = (
             'token_nf',
             'token_tag',
             'tag_token',
             'tag_nf',
             'nf_token',
             'nf_tag'
-        ):
-            return self.__dict__['dictionaries'][name]
-        elif name in self.__dict__:
-            return self.__dict__[name]
-        else:
-            raise AttributeError(name)
+        )
+        self.token_nf = dict()
+        self.token_tag = dict()
+        self.tag_token = dict()
+        self.tag_nf = dict()
+        self.nf_token = dict()
+        self.nf_tag = dict()
     
-    def __setattr__(self, name, val):
-        if name in (
-            'token_nf',
-            'token_tag',
-            'tag_token',
-            'tag_nf',
-            'nf_token',
-            'nf_tag'
-        ):
-            self.__dict__['dictionaries'][name] = val
-        else:
-            self.__dict__[name] = val
+    def fill_dicts(self, token, normal_form, tag):
+        self.tag_token.setdefault(tag, set()).add(token)
+        self.tag_nf.setdefault(tag, set()).add(normal_form)
+        self.nf_token.setdefault(normal_form, set()).add(token)
+        self.nf_tag[normal_form] = tag
+        self.token_nf[token] = normal_form
+        self.token_tag[token] = tag
     
-    def create_files(self):
-        if not self.files_created_flag and not self.files_loaded_flag:
-            for dictionary in self.dictionaries:
-                name = dictionary + '#' +strftime(dt_stamp)
-                file = rwtools.create_new_binary(name, self.folder)
-                self.save_files[dictionary] = file.name
-                file.close()
-            self.files_created_flag = True
-    
-    def load_files_from_folder(self):
-        if not self.files_created_flag and not self.files_loaded_flag:
-            fp = rwtools.collect_exist_files(self.folder)
-            for path in fp:
-                name = path.name.split('#')[0]
-                self.save_files[name] = str(path)
-            self.files_loaded_flag = True
-    
-    def open_dict(self, dictionary):
-        if self.dictionaries[dictionary]:
-            return self.dictionaries[dictionary]
-        else:
-            dct = rwtools.load_pickle(self.save_files[dictionary], mode='rb')
-            if dct:
-                self.dictionaries[dictionary] = dct
-    
-    def close_dict(self, dictionary):
-        if not self.dictionaries[dictionary]:
-            print('Dictionary {} is empty'. format(dictionary))
-        else:
-            rwtools.save_pickle(
-                self.dictionaries[dictionary],
-                self.save_files[dictionary]
-            )
-            self.dictionaries[dictionary] = dict()
-    
-    def erase_dict(self, dictionary):
-        breaker = input(
-            'You are going to delete dictionary "{}" '.format(dictionary)
-            + 'entierly! Please confirm!("Y"/"N")\n')
-        if breaker == 'N':
-            print ('Operation aborted')
-            return None
-        elif breaker == 'Y':
-            with open(self.save_files[dictionary], mode='wb') as f:
-                f.truncate(0)
-            self.dictionaries[dictionary] == dict()
-        else:
-            print('Incorrect command! Operation aborted')
-            
-
-
+    def upload_dicts(self):
+        for dictionary in self.__dict_names:
+            yield dictionary, self.__dict__[dictionary]
