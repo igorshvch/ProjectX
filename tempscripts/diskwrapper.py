@@ -76,13 +76,29 @@ class OnDiscDictWrapper():
     def erase_dict(self, dictionary):
         breaker = input(
             'You are going to delete dictionary "{}" '.format(dictionary)
-            + 'entierly! Please confirm!("Y"/"N")\n')
+            + 'entierly! Please confirm!("Y"/"N")\n'
+        )
         if breaker == 'N':
             print ('Operation aborted')
             return None
         elif breaker == 'Y':
             with open(self.save_files[dictionary], mode='wb') as f:
                 f.truncate(0)
+        else:
+            print('Incorrect command! Operation aborted')
+    
+    def erase_all_dicts(self):
+        breaker = input(
+            'You are going to delete all dictionaries'
+            + 'entierly! Please confirm!("Y"/"N")\n'
+        )
+        if breaker == 'N':
+            print ('Operation aborted')
+            return None
+        elif breaker == 'Y':
+            for dictionary in self.save_files:
+                with open(self.save_files[dictionary], mode='wb') as f:
+                    f.truncate(0)
         else:
             print('Incorrect command! Operation aborted')
     
