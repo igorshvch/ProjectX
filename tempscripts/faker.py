@@ -9,6 +9,7 @@ alph_options = {
     )
 }
 
+
 def create_fake_string_with_fixed_length(length, char_t='mixed'):
     return ''.join(rd.choices(alph_options[char_t], k=length))
 
@@ -19,6 +20,7 @@ def fake_string_with_fixed_length_gen(quant, length, char_t='mixed'):
     while quant:
         yield inner_func(length, char_set)
         quant -= 1
+
 
 def create_fake_string_with_arb_length(len_b=10, char_t='mixed'):
     return ''.join(rd.choices(alph_options[char_t], k=rd.randint(1, len_b)))

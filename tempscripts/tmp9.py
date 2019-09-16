@@ -1,5 +1,5 @@
 import re
-from time import strftime
+from time import time, strftime
 from collections import Counter
 
 import pymorphy2
@@ -11,6 +11,108 @@ morph = pymorphy2.MorphAnalyzer()
 parse = morph.parse
 
 dt_stamp = '%Y-%m-%d#%a#%H-%M-%S'
+
+def main(corpus_iterator, project_name, main_folder):
+    print('Documents in total:', len(corpus_iterator))
+    import pathlib as pthl
+    ######1
+    time_start_0 = time()
+    time_start = time()
+    ######2
+
+    file_tk = rwtools.create_new_binary(project_name+'.tk', main_folder)
+    file_lm = rwtools.create_new_binary(project_name+'.lm', main_folder)
+    file_bg_tk = rwtools.create_new_binary(project_name+'.bgtk', main_folder)
+    file_bg_lm = rwtools.create_new_binary(project_name+'.bglm', main_folder)
+
+    iop_obj_tk = iop.IOPickler(file_tk)
+    iop_obj_lm = iop.IOPickler(file_lm)
+    iop_obj_bg_tk = iop.IOPickler(file_bg_tk)
+    iop_obj_bg_lm = iop.IOPickler(file_bg_lm)
+
+    file_tk = file_lm = file_bg_tk = file_bg_lm = None
+
+    pthl.Path(main_folder).joinpath('DictHolder').mkdir(
+        parents=True, exist_ok=True
+    )
+
+    dct_wrap = OnDiscDictWrapper(
+        str(pthl.Path(main_folder).joinpath('DictHolder'))
+    )
+
+    cash_dct = process_corpus(corpus_iterator, iop_obj_tk)
+    
+    time_subtotal = time()
+    mins = (time_subtotal - time_start) // 60
+    sec = (time_subtotal - time_start) % 60
+    print(
+        'Dictionaries were created: {: >3.0f} min, {: >6.3f} sec'.format(mins, sec)
+    )
+    time_start = time_subtotal
+
+    dct_wrap.store_external_dicts(cash_dct.upload_dicts())
+    ######1
+    time_subtotal = time()
+    mins = (time_subtotal - time_start) // 60
+    sec = (time_subtotal - time_start) % 60
+    print(
+        'Dictionaries were saved: {: >3.0f} min, {: >6.3f} sec'.format(mins, sec)
+    )
+    time_start = time_subtotal
+    ######2
+    del cash_dct
+
+    clean_corpus_with_dict(iop_obj_tk, iop_obj_lm, dct_wrap.token_nf)
+    ######1
+    time_subtotal = time()
+    mins = (time_subtotal - time_start) // 60
+    sec = (time_subtotal - time_start) % 60
+    print(
+        'Corpus was lemmatized: {: >3.0f} min, {: >6.3f} sec'.format(mins, sec)
+    )
+    time_start = time_subtotal
+    ######2
+    create_bigrams(iop_obj_tk, iop_obj_bg_tk)
+    ######1
+    time_subtotal = time()
+    mins = (time_subtotal - time_start) // 60
+    sec = (time_subtotal - time_start) % 60
+    print(
+        'Bg_tk was created: {: >3.0f} min, {: >6.3f} sec'.format(mins, sec)
+    )
+    time_start = time_subtotal
+    ######2
+    create_bigrams(iop_obj_lm, iop_obj_bg_lm)
+    ######1
+    time_subtotal = time()
+    mins = (time_subtotal - time_start) // 60
+    sec = (time_subtotal - time_start) % 60
+    print(
+        'Bg_lm was created: {: >3.0f} min, {: >6.3f} sec'.format(mins, sec)
+    )
+    time_start = time_subtotal
+    ######2
+    ######1
+    time_subtotal = time()
+    mins = (time_subtotal - time_start_0) // 60
+    sec = (time_subtotal - time_start_0) % 60
+    print(
+        'Total time cost: {: >3.0f} min, {: >6.3f} sec'.format(mins, sec)
+    )
+    ######2
+
+    return (
+        dct_wrap,
+        iop_obj_tk,
+        iop_obj_lm,
+        iop_obj_bg_tk,
+        iop_obj_bg_lm,
+    )
+
+
+
+
+##########################################
 
 def process_corpus(doc_store, iop_obj, sep=10000):
     cd = CashDicts()
@@ -48,6 +150,8 @@ def parser(word):
     normal_form = word_meta.normal_form
     POS_tag = str(word_meta.tag.POS)
     return normal_form, POS_tag
+
+#################################
 
 def clean_corpus_with_dict(loader, saver, dct, sep=10000):
     '''
@@ -87,7 +191,7 @@ def create_bigrams(loader, saver, sep=10000):
         ]
         saver.append(doc)
 
-
+###########################################
 class CashDicts():
     def __init__(self):
         self.__dict_names = (
@@ -221,7 +325,7 @@ class OnDiscDictWrapper():
     
     def store_external_dicts(self, dicts_iter):
         for dictionary, dct in dicts_iter:
-            print(dictionary)
+            #print(dictionary)
             rwtools.save_pickle(
                 dct,
                 self.save_files[dictionary]
