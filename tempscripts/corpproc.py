@@ -1,4 +1,5 @@
 import re
+import array
 from time import time, strftime
 from collections import Counter
 
@@ -21,16 +22,29 @@ def main(corpus_iterator, project_name, main_folder):
     ######2
 
     file_tk = rwtools.create_new_binary(project_name+'.tk', main_folder)
+    file_tk_set = rwtools.create_new_binary(
+        project_name+'.tk_set', main_folder
+    )
     file_lm = rwtools.create_new_binary(project_name+'.lm', main_folder)
+    file_lm_set = rwtools.create_new_binary(
+        project_name+'.lm_set', main_folder
+    )
     file_bg_tk = rwtools.create_new_binary(project_name+'.bgtk', main_folder)
     file_bg_lm = rwtools.create_new_binary(project_name+'.bglm', main_folder)
+    file_inv_index = rwtools.create_new_binary(
+        project_name+'.ii', main_folder
+    )
 
     iop_obj_tk = iop.IOPickler(file_tk)
+    iop_obj_tk_set = iop.IOPickler(file_tk_set)
     iop_obj_lm = iop.IOPickler(file_lm)
+    iop_obj_lm_set = iop.IOPickler(file_lm_set)
     iop_obj_bg_tk = iop.IOPickler(file_bg_tk)
     iop_obj_bg_lm = iop.IOPickler(file_bg_lm)
+    iop_obj_inv_index = iop.IOPickler(file_inv_index)
 
-    file_tk = file_lm = file_bg_tk = file_bg_lm = None
+    file_tk = file_tk_set = file_lm = file_lm_set = None 
+    file_bg_tk = file_bg_lm = file_inv_index= None
 
     pthl.Path(main_folder).joinpath('DictHolder').mkdir(
         parents=True, exist_ok=True
@@ -40,7 +54,7 @@ def main(corpus_iterator, project_name, main_folder):
         str(pthl.Path(main_folder).joinpath('DictHolder'))
     )
 
-    cash_dct = process_corpus(corpus_iterator, iop_obj_tk)
+    cash_dct = process_corpus(corpus_iterator, iop_obj_tk, iop_obj_tk_set)
     
     time_subtotal = time()
     mins = (time_subtotal - time_start) // 60
@@ -62,7 +76,7 @@ def main(corpus_iterator, project_name, main_folder):
     ######2
     del cash_dct
 
-    clean_corpus_with_dict(iop_obj_tk, iop_obj_lm, dct_wrap.token_nf)
+    lemmatize(iop_obj_tk, iop_obj_lm, iop_obj_lm_set, dct_wrap.token_nf)
     ######1
     time_subtotal = time()
     mins = (time_subtotal - time_start) // 60
@@ -92,6 +106,18 @@ def main(corpus_iterator, project_name, main_folder):
     )
     time_start = time_subtotal
     ######2
+    dct_indicies = create_inv_index(iop_obj_tk_set, iop_obj_inv_index)
+    dct_wrap.inv_index = dct_indicies
+    ######1
+    time_subtotal = time()
+    mins = (time_subtotal - time_start) // 60
+    sec = (time_subtotal - time_start) % 60
+    print(
+        'Inverted index created: {: >3.0f} min, {: >6.3f} sec'.format(
+            mins, sec
+        )
+    )
+    ######2
     ######1
     time_subtotal = time()
     mins = (time_subtotal - time_start_0) // 60
@@ -104,9 +130,12 @@ def main(corpus_iterator, project_name, main_folder):
     return (
         dct_wrap,
         iop_obj_tk,
+        iop_obj_tk_set,
         iop_obj_lm,
+        iop_obj_lm_set,
         iop_obj_bg_tk,
         iop_obj_bg_lm,
+        iop_obj_inv_index
     )
 
 
@@ -114,7 +143,7 @@ def main(corpus_iterator, project_name, main_folder):
 
 ##########################################
 
-def process_corpus(doc_store, iop_obj, sep=10000):
+def process_corpus(doc_store, saver_doc_tok, saver_doc_set, sep=10000):
     cd = CashDicts()
     ws = Counter()
     counter_d = 0
@@ -126,22 +155,24 @@ def process_corpus(doc_store, iop_obj, sep=10000):
             print('Docs:', counter_d)
             print('Totlal words:',counter_w1)
         doc = doc['Текст документа']
-        tl, ws = tokenize(doc, ws)
+        tl, ws = tokenize(doc, ws, saver_doc_set)
         counter_w1 = len(ws)
-        iop_obj.append(tl)
+        saver_doc_tok.append(tl)
     for word in ws:
         counter_w2 += 1
         if counter_w2 % sep == 0:
             print('Processed words:',counter_w2)
         nf, tag = parser(word)
         cd.fill_dicts(word, nf, tag)
-        cd.doc_freq = ws
+    cd.doc_freq = ws
     return cd
 
-def tokenize(doc, tokens_set):
+def tokenize(doc, tokens_set, saver_set):
     doc = doc.lower()
     tokens_list = re.findall(r'\b[а-я][а-я-]*', doc)
-    tokens_set.update(set(tokens_list))
+    tokens_ad_hoc_set = set(tokens_list)
+    tokens_set.update(tokens_ad_hoc_set)
+    saver_set.append(tokens_ad_hoc_set)
     #tokens_set |= set(tokens_list)
     return tokens_list, tokens_set
 
@@ -153,16 +184,26 @@ def parser(word):
 
 #################################
 
+def lemmatize(loader, saver_list, saver_set, dct, sep=10000):
+    '''
+    Custom function for tokens lemmatization and set_of_lemms making
+    '''
+    for ind, doc in enumerate(loader):
+        if ind % sep == 0:
+            print('Docs: ', ind)
+        doc = [dct[word] for word in doc if word in dct]
+        doc_set = set(doc)
+        saver_list.append(doc)
+        saver_set.append(doc_set)
+
 def clean_corpus_with_dict(loader, saver, dct, sep=10000):
     '''
     General function for lemmatization
     and cleaning text with a dictionary object
     '''
-    counter = 0
-    for doc in loader:
-        counter += 1
-        if counter % sep == 0:
-            print('Docs: ', counter)
+    for ind, doc in enumerate(loader):
+        if ind % sep == 0:
+            print('Docs: ', ind)
         doc = [dct[word] for word in doc if word in dct]
         saver.append(doc)
     
@@ -171,25 +212,40 @@ def clean_corpus_with_set(loader, saver, set_c, sep=10000):
     General function for lemmatization
     and cleaning text with a dictionary object
     '''
-    counter = 0
-    for doc in loader:
-        counter += 1
-        if counter % sep == 0:
-            print('Docs: ', counter)
+    for ind, doc in enumerate(loader):
+        if ind % sep == 0:
+            print('Docs: ', ind)
         doc = [word for word in doc if word in set_c]
         saver.append(doc)
 
 def create_bigrams(loader, saver, sep=10000):
-    counter = 0
-    for doc in loader:
-        counter += 0
-        if counter % 10000:
-            print('Docs: ', counter)
+    for ind, doc in enumerate(loader):
+        if ind % sep == 0:
+            print('Docs: ', ind)
         doc = [
             doc[i-1]+'#'+doc[i]
             for i in range(1, len(doc), 1)
         ]
         saver.append(doc)
+
+def create_inv_index(loader, saver, sep=10000):
+    dct_words = {}
+    dct_indicies = {}
+    for ind, doc in enumerate(loader):
+        if ind % sep == 0:
+            print('Docs: ', ind)
+        for word in doc:
+            dct_words.setdefault(word, array.array('l')).append(ind)
+    print('Start writing')
+    counter = 0
+    while dct_words:
+        key, item = dct_words.popitem()
+        saver.append(item)
+        dct_indicies[key] = counter
+        counter += 1
+        if counter % sep == 0:
+            print('Docs: ', counter)
+    return dct_indicies
 
 ###########################################
 class CashDicts():
@@ -233,7 +289,8 @@ class OnDiscDictWrapper():
             'tag_nf',
             'nf_token',
             'nf_tag',
-            'doc_freq'
+            'doc_freq',
+            'inv_index'
         )
         self.folder = folder
         self.save_files = dict()
@@ -248,7 +305,8 @@ class OnDiscDictWrapper():
             'tag_nf',
             'nf_token',
             'nf_tag',
-            'doc_freq'
+            'doc_freq',
+            'inv_index'
         ):
             return self.__open_dict(name)
         elif name in self.__dict__:
@@ -264,7 +322,8 @@ class OnDiscDictWrapper():
             'tag_nf',
             'nf_token',
             'nf_tag',
-            'doc_freq'
+            'doc_freq',
+            'inv_index'
         ):
             self.__write_dict(name, val)
         else:
@@ -330,3 +389,34 @@ class OnDiscDictWrapper():
                 dct,
                 self.save_files[dictionary]
             )
+    
+
+class InvertedIndexWrapper():
+    def __init__(self, dct=None, ii_table=None, main_folder=None):
+        self.__keys = dct
+        self.__inverted_index = ii_table
+        if main_folder:
+            self.__folder = main_folder
+            self.__keys, self.__inverted_index = self.__load_data(main_folder)
+        else:
+            self.__folder = None
+    
+    def __iter__(self):
+        for key in self.__keys:
+            yield key
+
+    def __getitem__(self, item):
+        if item in self.__keys:
+            word_index = self.__keys[item]
+            doc_indicies = self.__inverted_index[word_index]
+            return doc_indicies
+    
+    def __load_data(self, folder):
+        files_with_keys = rwtools.collect_exist_files(folder, suffix='.dct')
+        for file_path in files_with_keys:
+            if 'inv_index' in str(file_path):
+                file_key = str(file_path)
+                break
+        file_with_table = rwtools.collect_exist_files(folder, suffix='.ii')
+        file_with_table = str(file_with_table.pop())
+        return rwtools.load_pickle(file_key), iop.IOPickler(file_with_table)
