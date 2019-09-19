@@ -55,7 +55,7 @@ def main(corpus_iterator, project_name, main_folder):
     )
 
     cash_dct = process_corpus(corpus_iterator, iop_obj_tk, iop_obj_tk_set)
-    
+    ######1
     time_subtotal = time()
     mins = (time_subtotal - time_start) // 60
     sec = (time_subtotal - time_start) % 60
@@ -63,7 +63,7 @@ def main(corpus_iterator, project_name, main_folder):
         'Dictionaries were created: {: >3.0f} min, {: >6.3f} sec'.format(mins, sec)
     )
     time_start = time_subtotal
-
+    ######2
     dct_wrap.store_external_dicts(cash_dct.upload_dicts())
     ######1
     time_subtotal = time()
@@ -108,6 +108,10 @@ def main(corpus_iterator, project_name, main_folder):
     ######2
     dct_indicies = create_inv_index(iop_obj_tk_set, iop_obj_inv_index)
     dct_wrap.inv_index = dct_indicies
+    ii_wraper = InvertedIndexWrapper(
+        dct=dct_indicies,
+        ii_table=iop_obj_inv_index
+    )
     ######1
     time_subtotal = time()
     mins = (time_subtotal - time_start) // 60
@@ -127,16 +131,17 @@ def main(corpus_iterator, project_name, main_folder):
     )
     ######2
 
-    return (
-        dct_wrap,
-        iop_obj_tk,
-        iop_obj_tk_set,
-        iop_obj_lm,
-        iop_obj_lm_set,
-        iop_obj_bg_tk,
-        iop_obj_bg_lm,
-        iop_obj_inv_index
-    )
+    return {
+        'ii': ii_wraper,
+        'dcts': dct_wrap,
+        'iter_tk': iop_obj_tk,
+        'iter_tk_set': iop_obj_tk_set,
+        'iter_lm': iop_obj_lm,
+        'iter_lm_set': iop_obj_lm_set,
+        'iter_bg_tk': iop_obj_bg_tk,
+        'iter_bg_lm': iop_obj_bg_lm,
+        'iter_ii_table': iop_obj_inv_index
+    }
 
 
 

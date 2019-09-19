@@ -39,7 +39,13 @@ data_trans_funcs = {
 
 def custom_processor_for_ConsPlus_data(counter, dct):
     req_name = dct['Название документа']
-    if req_name[:6] != 'Постан':
+    r_name = req_name[:6]
+    if (
+        r_name != 'Постан' and
+        r_name != 'Апелля' and
+        r_name != 'Опреде' and
+        r_name != 'Решени'
+    ):
         return counter, None
     name, sinopsis = data_trans_funcs['sinopsis'](req_name)
     dct['Название документа'] = name
