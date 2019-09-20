@@ -74,6 +74,11 @@ def main(corpus_iterator, project_name, main_folder):
     )
     time_start = time_subtotal
     ######2
+    corpus_stats = {
+        'corp_len': len(iop_obj_tk),
+        'total dif tokens': len(cash_dct.token_nf),
+        'total dif lemms': len(cash_dct.nf_tag),
+    }
     del cash_dct
 
     lemmatize(iop_obj_tk, iop_obj_lm, iop_obj_lm_set, dct_wrap.token_nf)
@@ -140,7 +145,8 @@ def main(corpus_iterator, project_name, main_folder):
         'iter_lm_set': iop_obj_lm_set,
         'iter_bg_tk': iop_obj_bg_tk,
         'iter_bg_lm': iop_obj_bg_lm,
-        'iter_ii_table': iop_obj_inv_index
+        'iter_ii_table': iop_obj_inv_index,
+        'stats': corpus_stats
     }
 
 
@@ -159,7 +165,7 @@ def process_corpus(doc_store, saver_doc_tok, saver_doc_set, sep=10000):
         if counter_d % sep == 0:
             print('Docs:', counter_d)
             print('Totlal words:',counter_w1)
-        doc = doc['Текст документа']
+        #doc = doc['Текст документа']
         tl, ws = tokenize(doc, ws, saver_doc_set)
         counter_w1 = len(ws)
         saver_doc_tok.append(tl)
@@ -425,3 +431,30 @@ class InvertedIndexWrapper():
         file_with_table = rwtools.collect_exist_files(folder, suffix='.ii')
         file_with_table = str(file_with_table.pop())
         return rwtools.load_pickle(file_key), iop.IOPickler(file_with_table)
+
+
+class CorpusBuffer():
+    def __init__(self,
+                 word_pos_dct,
+                 stop_words={},
+                 word_len=0,
+                 POSes=None,
+                 ):
+        self.word_pos_dct = word_pos_dct
+        self.stop_words = stop_words
+        self.word_len = word_len
+        self.POSes = POSes
+    
+    def __call__(self, doc):
+        return self.__main(doc)
+
+    def __main(self, doc):
+        holder = []
+        for token in doc:
+            if (
+                len(token) > self.word_len
+                and token not in self.stop_words
+                and self.word_pos_dct[token] in self.POSes
+            ):
+                holder.append(token)
+        return holder
