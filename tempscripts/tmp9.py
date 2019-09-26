@@ -21,7 +21,7 @@ def find_demands(corp_iter):
             errors.append(ind)
     return demands, errors
 
-def print_rd_error(corp_iter, errors):
+def print_random_error(corp_iter, errors):
     def inner_f(start=0, lng=400, num=None):
         if not num:
             numb = errors[random.randint(0, len(errors)-1)]

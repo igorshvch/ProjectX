@@ -14,7 +14,10 @@ parse = morph.parse
 dt_stamp = '%Y-%m-%d#%a#%H-%M-%S'
 
 def main(corpus_iterator, project_name, main_folder):
-    print('Documents in total:', len(corpus_iterator))
+    try:
+        print('Documents in total:', len(corpus_iterator))
+    except:
+        print('Corpus length unavailable')
     import pathlib as pthl
     ######1
     time_start_0 = time()
@@ -137,15 +140,15 @@ def main(corpus_iterator, project_name, main_folder):
     ######2
 
     return {
-        'ii': ii_wraper,
+        'invind': ii_wraper,
         'dcts': dct_wrap,
-        'iter_tk': iop_obj_tk,
-        'iter_tk_set': iop_obj_tk_set,
-        'iter_lm': iop_obj_lm,
-        'iter_lm_set': iop_obj_lm_set,
-        'iter_bg_tk': iop_obj_bg_tk,
-        'iter_bg_lm': iop_obj_bg_lm,
-        'iter_ii_table': iop_obj_inv_index,
+        'tk': iop_obj_tk,
+        'tk_set': iop_obj_tk_set,
+        'lm': iop_obj_lm,
+        'lm_set': iop_obj_lm_set,
+        'bgtk': iop_obj_bg_tk,
+        'bglm': iop_obj_bg_lm,
+        'ii': iop_obj_inv_index,
         'stats': corpus_stats
     }
 
@@ -257,6 +260,78 @@ def create_inv_index(loader, saver, sep=10000):
         if counter % sep == 0:
             print('Docs: ', counter)
     return dct_indicies
+
+def load_previous_session(folder):
+    ####1
+    time0 = time()
+    ####2
+    options = {
+        'bglm': lambda x: iop.IOPickler(x),
+        'bgtk': lambda x: iop.IOPickler(x),
+        'ii': lambda x: iop.IOPickler(x),
+        'lm': lambda x: iop.IOPickler(x),
+        'lm_set': lambda x: iop.IOPickler(x),
+        'tk': lambda x: iop.IOPickler(x),
+        'tk_set': lambda x: iop.IOPickler(x)
+    }
+    res_dct = {}
+    dct_wrap = OnDiscDictWrapper(folder)
+    ####1
+    sub_time = time() - time0
+    print(
+        'Dicts loaded: {: >3.0f} min, {: >6.3f} sec'.format(
+            sub_time // 60, sub_time % 60
+        )
+    )
+    time1 = time()
+    ####2
+    fp = rwtools.collect_exist_files(folder)
+    for path in fp:
+        suffix = path.suffix[1:]
+        if suffix in options:
+            print('Loading {}'.format(suffix))
+            res_dct[suffix] = options[suffix](open(str(path), mode='rb'))
+            ####1
+            sub_time = time() - time1
+            print(
+                'Iterator {} loaded: {: >3.0f} min, {: >6.3f} sec'.format(
+                    suffix, sub_time // 60, sub_time % 60
+                )
+            )
+            time1 = time()
+            ####2
+    res_dct['invind'] = InvertedIndexWrapper(
+        dct=dct_wrap.inv_index,
+        ii_table = res_dct['ii']
+    )
+    ####1
+    sub_time = time() - time1
+    print(
+        'InIndex loaded: {: >3.0f} min, {: >6.3f} sec'.format(
+            sub_time // 60, sub_time % 60
+        )
+    )
+    time1 = time()
+    ####2
+    corpus_stats = {
+        'corp_len': len(res_dct['tk']),
+        'total dif tokens': len(dct_wrap.token_nf),
+        'total dif lemms': len(dct_wrap.nf_tag),
+    }
+    res_dct['dcts'] = dct_wrap
+    res_dct['stats'] = corpus_stats
+    ####1
+    total_time = time() - time0
+    print(
+        'Loading time: {: >3.0f} min, {: >6.3f} sec'.format(
+            total_time // 60, total_time % 60
+        )
+    )
+    ####2
+    return res_dct
+
+
+
 
 ###########################################
 class CashDicts():

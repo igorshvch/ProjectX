@@ -12,43 +12,63 @@ GLOB_ENC = 'cp1251'
 
 def collect_exist_files(top_dir, suffix=''):
     holder = []
-    def inner_func(top_dir, suffix):
+    def inner_func_with_suf(top_dir, suffix, holder):
         p = Path(top_dir)
-        nonlocal holder
         store = [path_obj for path_obj in p.iterdir()]
         for path_obj in store:
             if path_obj.is_dir():
-                inner_func(path_obj, suffix)
+                inner_func_with_suf(path_obj, suffix, holder)
             elif path_obj.suffix == suffix:
                 holder.append(path_obj)
-    inner_func(top_dir, suffix)
+    def inner_func_without_suf(top_dir, holder):
+        p = Path(top_dir)
+        store = [path_obj for path_obj in p.iterdir()]
+        for path_obj in store:
+            if path_obj.is_dir():
+                inner_func_without_suf(path_obj, holder)
+            elif path_obj.is_file():
+                holder.append(path_obj)
+    if suffix:
+        inner_func_with_suf(top_dir, suffix, holder)
+    else:
+        inner_func_without_suf(top_dir, holder)
     return sorted(holder)
 
 def collect_exist_dirs(top_dir):
     holder = []
-    def inner_func(top_dir):
+    def inner_func(top_dir, holder):
         p = Path(top_dir)
-        nonlocal holder
         store = [path_obj for path_obj in p.iterdir() if path_obj.is_dir()]
         for path_obj in store:
             holder.append(path_obj)
-            inner_func(path_obj)
-    inner_func(top_dir)
+            inner_func(path_obj, holder)
+    inner_func(top_dir, holder)
     return sorted(holder)
 
 def collect_exist_files_and_dirs(top_dir, suffix=''):
     holder = []
-    def inner_func(top_dir, suffix):
+    def inner_func_with_suf(top_dir, suffix, holder):
         p = Path(top_dir)
-        nonlocal holder
         store = [path_obj for path_obj in p.iterdir()]
         for path_obj in store:
             if path_obj.is_dir():
                 holder.append(path_obj)
-                inner_func(path_obj, suffix)
+                inner_func_with_suf(path_obj, suffix, holder)
             elif path_obj.suffix == suffix:
                 holder.append(path_obj)
-    inner_func(top_dir, suffix)
+    def inner_func_without_suf(top_dir, holder):
+        p = Path(top_dir)
+        store = [path_obj for path_obj in p.iterdir()]
+        for path_obj in store:
+            if path_obj.is_dir():
+                holder.append(path_obj)
+                inner_func_without_suf(path_obj, holder)
+            elif path_obj.is_file():
+                holder.append(path_obj)
+    if suffix:
+        inner_func_with_suf(top_dir, suffix, holder)
+    else:
+        inner_func_without_suf(top_dir, holder)
     return sorted(holder)
 
 def read_text(path, encoding=GLOB_ENC):
