@@ -20,6 +20,7 @@ def main(corpus_iterator, project_name, main_folder):
         print('Corpus length unavailable')
     import pathlib as pthl
     ######1
+    time_subtotal = None
     time_start_0 = time()
     time_start = time()
     ######2
