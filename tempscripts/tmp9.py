@@ -1,5 +1,6 @@
 import re
 import random
+import math
 from collections import Counter
 
 import debugger as dbg
@@ -178,13 +179,21 @@ def extract_arts(list_of_l_tokens, test_set):
     percents = collect_art_dispers(count_res, len(res))
     return count_res, res, percents
 
-def extract_arts_main(list_of_strings, test_set):
+def extract_arts_compaund(list_of_strings, test_set):
     '''
     Main function in the set
     '''
     list_of_lists = convert_list_of_strings_to_list_of_tokens(list_of_strings)
     count_res, res, percents = extract_arts(list_of_lists, test_set)
     return count_res, res, percents
+
+def main_extract_arts(art_mapping, test_set):
+    holder = []
+    for ind, mapping in enumerate(art_mapping):
+        if ind % 3000 == 0:
+            print('mapping for doc#', ind)
+        holder.append(extract_arts_compaund(mapping, test_set))
+    return holder
 ######
 def extract_new_laws(list_of_l_tokens, test_set):
     '''
@@ -205,13 +214,21 @@ def extract_new_laws(list_of_l_tokens, test_set):
     #percents = collect_art_dispers(count_res, len(res))
     return res #count_res, res, percents
 
-def extract_new_laws_main(list_of_strings, test_set):
+def extract_new_laws_compaund(list_of_strings, test_set):
     '''
     Main function in this subdomain
     '''
     list_of_lists = convert_list_of_strings_to_list_of_tokens(list_of_strings)
     res = extract_new_laws(list_of_lists, test_set)
     return res
+
+def main_extract_new_laws(art_mapping, test_set):
+    holder = []
+    for ind, mapping in enumerate(art_mapping):
+        if ind % 3000 == 0:
+            print('mapping for doc#', ind)
+        holder.append(extract_new_laws_compaund(mapping, test_set))
+    return holder
 #################
 
 def docs_writer(nums, doc_keeper):
@@ -223,7 +240,6 @@ def docs_writer(nums, doc_keeper):
         writer(doc_keeper(num), 'test_{}'.format(num), mode='w')
 
 #################
-
 def list_of_lists_2_list_of_strings(list_of_lists):
     return [string for column in list_of_lists for string in column]
 
@@ -249,14 +265,86 @@ def main_normalize_strings_in_lists(list_of_lists, parser):
     print('\tcreated list_of_strings, length:', len(list_of_strings))
     lem_map = create_lem_map_for_list_of_strings(list_of_strings, parser)
     print('\tcreated lem_map, length:', len(lem_map))
-    return normalize_strings_in_lists_of_strings(list_of_strings, lem_map)
+    list_of_lem_strings = normalize_strings_in_lists_of_strings(
+        list_of_strings, lem_map
+    )
+    print('\tcreated list_of_lem_strings, length:', len(list_of_lem_strings))
+    return list_of_lem_strings
+
+def list_of_lem_strings_count_adn_pretty(list_of_lem_strings):
+    '''
+    Return:
+    [
+        кодекс российский федерация                        :  70017
+        гражданский процессуальный кодекс российский       :  36396
+        кодекс российский федерация о                      :  16712
+    ],
+    'Counter' object
+    '''
+    cnt = Counter(list_of_lem_strings)
+    pretty_strings = [
+        '{: <55s} : {: >6d}'.format(item[0], item[1])
+        for item in cnt.most_common()
+    ]
+    return pretty_strings, cnt
+######
+def normalize_strings_in_list_of_lists(list_of_lists, lem_map):
+    list_of_lists_lemmed = []
+    list_for_set = []
+    uniq_strings = set()
+    for lst in list_of_lists:
+        inner_res_list = []
+        for raw_string in lst:
+            inner_token_lst = re.findall(r'[А-я0-9n\-]+', raw_string)
+            inner_lem_lst = [lem_map[token] for token in inner_token_lst]
+            lem_string = ' '.join(inner_lem_lst)
+            inner_res_list.append(lem_string)
+        list_of_lists_lemmed.append(inner_res_list)
+        list_for_set.extend(inner_res_list)
+    uniq_strings = set(list_for_set)
+    return list_of_lists_lemmed, uniq_strings
+
+def eval_doc_freq(list_of_lists_lemmed, uniq_strings):
+    df_collector = {lem_string:0 for lem_string in uniq_strings}
+    for list_lemmed in list_of_lists_lemmed:
+        for lem_string in set(list_lemmed):
+            df_collector[lem_string] += 1
+    return df_collector
+
+def count_idf(df_collector, collection_length):
+    idf_collector = {}
+    for lem_string in df_collector:
+        idf_collector[lem_string] = math.log10(
+            collection_length/df_collector[lem_string]
+        )
+    return idf_collector
+
+def main_idf_eval(list_of_lists, parser):
+    print('start')
+    list_of_strings = list_of_lists_2_list_of_strings(list_of_lists)
+    print('\tcreated list_of_strings, length:', len(list_of_strings))
+    lem_map = create_lem_map_for_list_of_strings(list_of_strings, parser)
+    print('\tcreated lem_map, length:', len(lem_map))
+    list_of_lists_lemmed, uniq_strings = normalize_strings_in_list_of_lists(
+        list_of_lists, lem_map
+    )
+    print(
+        '\tcreated list_of_lists_lemmed and uniq_strings, length:',
+        len(list_of_lists_lemmed), 'and', len(uniq_strings)
+    )
+    df_collector = eval_doc_freq(list_of_lists_lemmed, uniq_strings)
+    print('\tcreated df_collector, length:', len(df_collector))
+    idf_collector = count_idf(df_collector, len(list_of_lists))
+    print('\tcreated idf_collector, length:', len(idf_collector))
+    return df_collector, idf_collector
 
 
-#pattern2 = (
-#'[А-я]*[,.:;]* *[А-я0-9.]*[,.:;]* *[А-я]*[,.:;]* *[А-я0-9.]*[,.:;]* *[Сс]т[.атьяиеюёймх]{1,6} [0-9]{1,4}\.*[0-9]{0,4}\W* *[0-9]{0,4}\.*[0-9]{0,4}\W* *[0-9]{0,4}\.*[0-9]{0,4}\W* [А-я]+ [А-я]* *\w+ [А-я0-9\-ФКЗ]*'
-#)
-#
 
+#' '.join(test_set2)
+#Out[607]: 'арбитражной уголовная тк земельной законом закону уголовного арбитражно арбитражный жилищном жилищною законе арбитражному упк гражданскому жилищный уголовною коап уголовен кодекса земельна кодексом гражданским жилищной земельном кодексе земельным арбитражную арбитражное уголовный трудовую земелен жилищному арбитражною гражданской уголовную земельною арбитражен уголовной гк жилищно гражданскую трудовою земельно гражданское федеральном федерально жилищным земельную арбитражна гражданская федеральному трудовое федеральной уголовном уголовным земельное федеральною закона трудовая закон трудовой федеральное гражданский земельная жилищная арбитражного трудовым федеральную арбитражном федеральный апк жилищна федеральна федерального гпк арбитражным земельного жилищен гражданского федеральная уголовна трудовом кодексу жилищную гражданском земельному трудового кодекс гражданскою федеральным федерален жилищного арбитражная ук уголовному трудовому уголовно жилищное уголовное земельный'
+
+#' '.join(test_set3)
+#Out[608]: 'арбитражной уголовная тк земельной законом закону уголовного арбитражно арбитражный жилищном жилищною законе арбитражному упк гражданскому жилищный уголовною коап уголовен земельна гражданским жилищной земельном земельным арбитражную арбитражное уголовный земелен жилищному арбитражною гражданской уголовную земельною арбитражен уголовной гк жилищно гражданскую земельно гражданское федеральном федерально жилищным земельную арбитражна гражданская федеральному федеральной уголовном уголовным земельное федеральною закона закон федеральное гражданский земельная жилищная арбитражного федеральную арбитражном федеральный апк жилищна федеральна федерального гпк арбитражным земельного жилищен гражданского федеральная уголовна жилищную гражданском земельному гражданскою федеральным федерален жилищного арбитражная ук уголовному уголовно жилищное уголовное земельный'
 
 #cp3 = crp.CorpusBuffer(demands_meta['dcts'].nf_tag, word_len=2, POSes={'NOUN', 'ADJF', 'ADJS', 'COMP', 'VERB', 'INFN', 'PRTF', 'PRTS', 'GRND', 'NUMR', 'ADVB', 'NPRO', 'PRED', 'PREP'}, stop_words={'гггга', 'копа', 'рубль', 'коап', 'год', 'размер', 'число', 'сумма', 'административный', 'россия', 'москва',})
 #
