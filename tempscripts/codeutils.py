@@ -48,12 +48,12 @@ def code_count_lines2(folder, suffix='.py', encoding='utf', delim='\n'):
     return (
         delim.join(
             (
-                'Total lines: {: >6d} in {: >3d} files'.format(
+                'Total lines: {: >6d} in {: >3d} files:'.format(
                     counter_all_lines, len(fp)
                 ),
-                '\tcode lines:\t{: >6d}'.format(counter_code_lines),
-                '\tcomment lines:\t{: >6d}'.format(counter_comment_lines),
-                '\tblank lines:\t{: >6d}'.format(counter_blank_lines)
+                '1) code lines:    {: >6d}'.format(counter_code_lines),
+                '2) comment lines: {: >6d}'.format(counter_comment_lines),
+                '3) blank lines:   {: >6d}'.format(counter_blank_lines)
             )
         )
     )
