@@ -6,6 +6,23 @@ from collections import Counter
 import debugger as dbg
 from writer import writer
 
+dct_shorthands = {
+    'пункт': 'п',
+    'подпункт': 'п',
+    'п.': 'п',
+    'пп.': 'п',
+    'п.п.': 'п',
+    'часть': 'ч',
+    'ч.': 'ч',
+    'чч.': 'ч',
+    'ч.ч.': 'ч',
+    'статья': 'ст',
+    'ст': 'ст',
+    'ст.': 'ст',
+    'ст.ст.': 'ст'
+}
+
+
 @dbg.timer_with_func_name
 def find_demands(corp_iter):
     demands = []
@@ -73,6 +90,7 @@ def create_art_map(corp_iter, iop_object, pat='pat4', delim=10000):
         +r'[0-9]{0,4}\.*[0-9]{0,4}\W* *[0-9]{0,4}\.*[0-9]{0,4}\W* '
         +r'[А-я]+ [А-я]* *\w+ [А-я0-9\-ФКЗ]*'
     )
+    ########
     ####Following patterns give best results on EC court practice.
     pattern4 = (
         r'[А-я0-9N\-.]*\W{0,2}[А-я0-9N\-.]+\W{1,2}[Сс]т[а.]\w* '
@@ -83,7 +101,7 @@ def create_art_map(corp_iter, iop_object, pat='pat4', delim=10000):
     pattern5 = (
         r'[А-я0-9N\-.]*\W{0,2}[А-я0-9N\-.]+\W{1,2}[Сс]т[а.]\w* [0-9]{1,4}\.*[0-9]{0,4}\W{1,2}[А-я0-9N\-]+\W{1,2}[А-я0-9N\-]+\W{1,2}[А-я0-9N\-]*\W{0,2}[А-я0-9N\-]*\W{0,2}'
     )
-    ####
+    ########
     options = {
         'pat0': pattern0,
         'pat1': pattern1,
@@ -137,7 +155,7 @@ def create_parser(parser, number='sing'):
     }
     return options[number]
 
-def collect_art_dispers(counter, lng, verbose=False):
+def collect_art_dispers(counter, arts_in_total, verbose=False):
     '''
     Returns:
     [
@@ -151,7 +169,7 @@ def collect_art_dispers(counter, lng, verbose=False):
     '''
     holder = []
     for key, val in counter.most_common():
-        holder.append((key, val/lng))
+        holder.append((key, val/arts_in_total))
     if verbose:
         for key, val in holder:
             print('key: {: >4s} - {: >5.2f}%'. format(key, val))
@@ -180,14 +198,18 @@ def extract_arts(list_of_l_tokens, test_set):
     return count_res, res, percents
 
 def extract_arts_compaund(list_of_strings, test_set):
-    '''
-    Main function in the set
-    '''
     list_of_lists = convert_list_of_strings_to_list_of_tokens(list_of_strings)
     count_res, res, percents = extract_arts(list_of_lists, test_set)
     return count_res, res, percents
 
 def main_extract_arts(art_mapping, test_set):
+    '''
+    Main function in this area
+    art_mapping - iterable object with lists_of_strings
+    test_set - set object with words describing laws
+    test_set contains derivatives from following words:
+    тк трудовой
+    '''
     holder = []
     for ind, mapping in enumerate(art_mapping):
         if ind % 3000 == 0:
@@ -215,14 +237,21 @@ def extract_new_laws(list_of_l_tokens, test_set):
     return res #count_res, res, percents
 
 def extract_new_laws_compaund(list_of_strings, test_set):
-    '''
-    Main function in this subdomain
-    '''
     list_of_lists = convert_list_of_strings_to_list_of_tokens(list_of_strings)
     res = extract_new_laws(list_of_lists, test_set)
     return res
 
 def main_extract_new_laws(art_mapping, test_set):
+    '''
+    Main function in this subdomain
+    art_mapping - iterable object with lists_of_strings
+    test_set - set object with words describing laws
+    test_set contains derivatives from following words:
+    ук апк упк гражданский жилищный
+    гк тк уголовный уголовно коап кодекс
+    арбитражный закон трудовой гпк
+    земельный федеральный
+    '''
     holder = []
     for ind, mapping in enumerate(art_mapping):
         if ind % 3000 == 0:
@@ -243,15 +272,19 @@ def docs_writer(nums, doc_keeper):
 def list_of_lists_2_list_of_strings(list_of_lists):
     return [string for column in list_of_lists for string in column]
 
-def create_lem_map_for_list_of_strings(list_of_strings, parser):
+def create_lem_map_for_list_of_strings(list_of_strings,
+                                       parser,
+                                       pattern=r'[А-я0-9n\-]+'):
     long_string = ' '.join(list_of_strings)
-    tokens = set(re.findall(r'[А-я0-9n\-]+', long_string))
+    tokens = set(re.findall(pattern, long_string))
     lem_map = {token:parser(token).normal_form for token in tokens}
     return lem_map
 
-def normalize_strings_in_lists_of_strings(list_of_strings, lem_map):
+def normalize_strings_in_lists_of_strings(list_of_strings,
+                                          lem_map,
+                                          pattern=r'[А-я0-9n\-]+'):
     list_of_lists_of_tokens = [
-        re.findall(r'[А-я0-9n\-]+', raw_str) for raw_str in list_of_strings
+        re.findall(pattern, raw_str) for raw_str in list_of_strings
     ]
     list_of_lists_of_lemms = [
         [lem_map[token] for token in lst] for lst in list_of_lists_of_tokens
@@ -338,6 +371,113 @@ def main_idf_eval(list_of_lists, parser):
     print('\tcreated idf_collector, length:', len(idf_collector))
     return df_collector, idf_collector
 
+############
+
+def convert_raw_tokens_to_lemms(iop1,
+                                iop2,
+                                lem_map,
+                                pattern=r'[А-я0-9n\-.]+'):
+    '''
+    Perform convertion betwween two iop.IOPickler()-objects
+    contains of lists_of_strings in accrodance with the following
+    procedure:
+    1) from each list take each string
+    2) find all tokens according to the pattern
+    3) normalize tokens by lem_map dictionary
+    4) append list of normed tokens to the intermediate holder
+    5) append intermidiate holder to iop2
+    '''
+    internal_list = []
+    for ind, lst in enumerate(iop1):
+        if ind % 5000 == 0:
+            print('doc #', ind)
+        for string in lst:
+            spl_str = re.findall(pattern, string)
+            spl_str = [lem_map[token] for token in spl_str]
+            internal_list.append(spl_str)
+        iop2.append(internal_list)
+        internal_list = []
+
+
+
+def test_search_func(test_list_of_strings, shd):
+    holder = []
+    for ind, tokens_list in enumerate(test_list_of_strings):
+        ih = [] # intermidiate holder
+        while tokens_list:
+            token = tokens_list.pop(0)
+            if token in {'пункт', 'подпункт', 'п.', 'пп.', 'п.п.'}:
+                print(ind, 'level1', token, end=' /// ')
+                ih.append(shd[token])
+                try:
+                    num = tokens_list.pop(0)
+                except:
+                    print(IndexError('pop from empty list'))
+                    ih = []
+                    break
+                ih.append(num)
+                continue
+            if token in {'часть', 'ч.', 'чч.', 'ч.ч.'}:
+                print(ind, 'level2', token, end=' /// ')
+                ih.append(shd[token])
+                try:
+                    num = tokens_list.pop(0)
+                except:
+                    print(IndexError('pop from empty list'))
+                    ih = []
+                    break
+                ih.append(num)
+                continue
+            if token in {'статья', 'ст', 'ст.', 'ст.ст.'}:
+                print(ind, 'level3', token, end=' /// ')
+                ih.append(shd[token])
+                try:
+                    num = tokens_list.pop(0)
+                except:
+                    print(IndexError('pop from empty list'))
+                    ih = []
+                    break
+                ih.append(num)
+                try:
+                    new_token = tokens_list.pop(0)
+                except:
+                    print(IndexError('pop from empty list'))
+                    ih = []
+                    break
+                if new_token in {'гпк', 'коап', 'тк'}:
+                    print(ind, 'level3.1', new_token, end=' /// ')
+                    ih.append(new_token)
+                else:
+                    print(ind, 'level3.2', new_token, end=' /// ')
+                    if new_token == 'гражданский':
+                        try:
+                            another_new_token = tokens_list.pop(0)
+                        except:
+                            print(IndexError('pop from empty list'))
+                            ih = []
+                            break                        
+                        if another_new_token == 'процессуальный':
+                            print(ind, 'level3.2.1', another_new_token, end=' /// ')
+                            ih.append('гпк')
+                    elif new_token == 'кодекс':
+                        try:
+                            another_new_token = tokens_list.pop(0)
+                        except:
+                            print(IndexError('pop from empty list'))
+                            ih = []
+                            break
+                        if another_new_token == 'российский':
+                            print(ind, 'level3.2.1', another_new_token, end=' /// ')
+                            ih.append('коап')
+                    elif new_token == 'трудовой':
+                        print(ind, 'level3.2.3', new_token, end=' /// ')
+                        ih.append('тк')
+                    else:
+                        print(ind, 'LEVEL3.2.4', new_token, end=' /// ')
+                        ih = []
+                        break
+        holder.append(' '.join([lst for lst in ih if lst]))
+    return holder
 
 
 #' '.join(test_set2)
