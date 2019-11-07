@@ -6,7 +6,7 @@ from collections import Counter
 import debugger as dbg
 from writer import writer
 
-dct_shorthands = {
+ART_SUB_SHORTHANDS = {
     'пункт': 'п',
     'подпункт': 'п',
     'п.': 'п',
@@ -20,6 +20,51 @@ dct_shorthands = {
     'ст': 'ст',
     'ст.': 'ст',
     'ст.ст.': 'ст'
+}
+
+LITERAL_TO_NUMERAL_BELOW = {
+    'пер': '1',
+    'вто': '2',
+    'тре': '3',
+    'оди': '1',
+    'два': '2',
+    'три': '3',
+    'чет': '4',
+    'пят': '5',
+    'шес': '6',
+    'сем': '7',
+    'вос': '8',
+    'дев': '9',
+    'дес': '10'
+}
+LITERAL_TO_NUMERAL_ABOVE = {
+    'оди': '11',
+    'две': '12',
+    'три': '13',
+    'чет': '14',
+    'пят': '15',
+    'шес': '16',
+    'сем': '17',
+    'вос': '18',
+    'дев': '19',
+    'два': '20'
+}
+
+LITERAL_TO_NUMERAL = {
+    'один': '1',
+    'два': '2',
+    'три': '3',
+    'четыре': '4',
+    'пять': '5',
+    'шесть': '6',
+    'семь': '7',
+    'восемь': '8',
+    'девять': '9',
+    'десять': '10',
+    'одиннадцать': '11',
+    'двенадцать': '12',
+    'треть': '3',
+    'четвертовать': '4',
 }
 
 
@@ -118,7 +163,11 @@ def create_art_map(corp_iter, iop_object, pat='pat4', delim=10000):
     ]
     for iind, item in enumerate(corp_iter):
         if iind % delim == 0:
-            print('\t', 'doc#', iind, 'time:', '{: >6.2f}'.format(dbg.time()-time))
+            print(
+                '\t', 'doc#', iind, 'time:', '{: >6.2f}'.format(
+                    dbg.time()-time
+                    )
+            )
         doc = item['Текст документа']
         cleaned = re.findall(options[pat], doc)
         for ind in list(range(len(cleaned)-1, -1, -1)):
@@ -272,17 +321,21 @@ def docs_writer(nums, doc_keeper):
 def list_of_lists_2_list_of_strings(list_of_lists):
     return [string for column in list_of_lists for string in column]
 
-def create_lem_map_for_list_of_strings(list_of_strings,
+def create_lem_map_for_list_of_strings(
+                                       list_of_strings,
                                        parser,
-                                       pattern=r'[А-я0-9n\-]+'):
+                                       pattern=r'[А-я0-9n\-]+'
+                                      ):
     long_string = ' '.join(list_of_strings)
     tokens = set(re.findall(pattern, long_string))
     lem_map = {token:parser(token).normal_form for token in tokens}
     return lem_map
 
-def normalize_strings_in_lists_of_strings(list_of_strings,
+def normalize_strings_in_lists_of_strings(
+                                          list_of_strings,
                                           lem_map,
-                                          pattern=r'[А-я0-9n\-]+'):
+                                          pattern=r'[А-я0-9n\-]+'
+                                         ):
     list_of_lists_of_tokens = [
         re.findall(pattern, raw_str) for raw_str in list_of_strings
     ]
@@ -373,10 +426,12 @@ def main_idf_eval(list_of_lists, parser):
 
 ############
 
-def convert_raw_tokens_to_lemms(iop1,
+def convert_raw_tokens_to_lemms(
+                                iop1,
                                 iop2,
                                 lem_map,
-                                pattern=r'[А-я0-9n\-.]+'):
+                                pattern=r'[А-я0-9n\-.]+'
+                               ):
     '''
     Perform convertion betwween two iop.IOPickler()-objects
     contains of lists_of_strings in accrodance with the following
@@ -400,84 +455,116 @@ def convert_raw_tokens_to_lemms(iop1,
 
 
 
-def test_search_func(test_list_of_strings, shd):
+def test_search_func(
+                     test_list_of_strings,
+                     shd=ART_SUB_SHORTHANDS,
+                     l2n=LITERAL_TO_NUMERAL,
+                     concatenate=False
+                     #lnb = LITERAL_TO_NUMERAL_BELOW,
+                     #lna = LITERAL_TO_NUMERAL_ABOVE
+                    ):
     holder = []
+    #errors = []
+    SUB_SUB_ART_SH = {'пункт', 'подпункт', 'п.', 'пп.', 'п.п.'}
+    SUB_ART_SH = {'часть', 'ч.', 'чч.', 'ч.ч.'}
+    ARTICLE_SHORTHANDS = {'статья', 'ст', 'ст.', 'ст.ст.'}
     for ind, tokens_list in enumerate(test_list_of_strings):
         ih = [] # intermidiate holder
         while tokens_list:
             token = tokens_list.pop(0)
-            if token in {'пункт', 'подпункт', 'п.', 'пп.', 'п.п.'}:
-                print(ind, 'level1', token, end=' /// ')
+            if token in SUB_SUB_ART_SH:
+                #print(ind, 'level1', token, end=' /// ')
                 ih.append(shd[token])
                 try:
                     num = tokens_list.pop(0)
                 except:
-                    print(IndexError('pop from empty list'))
                     ih = []
                     break
+                if num.isalpha():
+                    ih.append(l2n[num] if num in l2n else '#')
+                else:
+                    ih.append(num)
+                #if num.isalpha():
+                #    errors.append(num)
                 ih.append(num)
                 continue
-            if token in {'часть', 'ч.', 'чч.', 'ч.ч.'}:
-                print(ind, 'level2', token, end=' /// ')
+            if token in SUB_ART_SH:
+                #print(ind, 'level2', token, end=' /// ')
                 ih.append(shd[token])
                 try:
                     num = tokens_list.pop(0)
                 except:
-                    print(IndexError('pop from empty list'))
                     ih = []
                     break
-                ih.append(num)
+                if num.isalpha():
+                    ih.append(l2n[num] if num in l2n else '#')
+                else:
+                    ih.append(num)
+                #if num.isalpha():
+                #    errors.append(num)
                 continue
-            if token in {'статья', 'ст', 'ст.', 'ст.ст.'}:
-                print(ind, 'level3', token, end=' /// ')
+            if token in ARTICLE_SHORTHANDS:
+                #print(ind, 'level3', token, end=' /// ')
                 ih.append(shd[token])
                 try:
                     num = tokens_list.pop(0)
                 except:
-                    print(IndexError('pop from empty list'))
                     ih = []
                     break
-                ih.append(num)
+                if num.isalpha():
+                    if num in l2n:              ####
+                        ih.append(num)          ####
+                    else:                       ####
+                        tokens_list = False     ####
+                        ih = []                 ####
+                        break                   ####
+                else:
+                    ih.append(num)
+                #if num.isalpha():
+                #    errors.append(num)
+                #ih.append(num)
                 try:
                     new_token = tokens_list.pop(0)
                 except:
-                    print(IndexError('pop from empty list'))
                     ih = []
                     break
                 if new_token in {'гпк', 'коап', 'тк'}:
-                    print(ind, 'level3.1', new_token, end=' /// ')
+                    #print(ind, 'level3.1', new_token, end=' /// ')
                     ih.append(new_token)
                 else:
-                    print(ind, 'level3.2', new_token, end=' /// ')
+                    #print(ind, 'level3.2', new_token, end=' /// ')
                     if new_token == 'гражданский':
                         try:
                             another_new_token = tokens_list.pop(0)
                         except:
-                            print(IndexError('pop from empty list'))
                             ih = []
                             break                        
                         if another_new_token == 'процессуальный':
-                            print(ind, 'level3.2.1', another_new_token, end=' /// ')
+                            #print(ind, 'level3.2.1', another_new_token, end=' /// ')
                             ih.append('гпк')
                     elif new_token == 'кодекс':
                         try:
                             another_new_token = tokens_list.pop(0)
                         except:
-                            print(IndexError('pop from empty list'))
                             ih = []
                             break
                         if another_new_token == 'российский':
-                            print(ind, 'level3.2.1', another_new_token, end=' /// ')
+                            #print(ind, 'level3.2.1', another_new_token, end=' /// ')
                             ih.append('коап')
                     elif new_token == 'трудовой':
-                        print(ind, 'level3.2.3', new_token, end=' /// ')
+                        #print(ind, 'level3.2.3', new_token, end=' /// ')
                         ih.append('тк')
                     else:
-                        print(ind, 'LEVEL3.2.4', new_token, end=' /// ')
+                        #print(ind, 'LEVEL3.2.4', new_token, end=' /// ')
                         ih = []
                         break
-        holder.append(' '.join([lst for lst in ih if lst]))
-    return holder
+        if concatenate: 
+            res = ' '.join(ih[::-1])
+        #print(res, bool(res))
+        else:
+            res = ih[::-1]
+        holder.append(res)
+    return sorted([item for item in holder if item]) #, errors
 
 
 #' '.join(test_set2)
