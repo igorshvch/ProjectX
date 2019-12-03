@@ -374,3 +374,4 @@ if __name__ == '__main__':
             'Mode arg error! Please type correct mode arg:',
             '-s for single mode, -p for pipline mode'
         )
+

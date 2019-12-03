@@ -114,6 +114,3 @@ class IOPickler_testing(IOPickler):
         
         
         
-
-
-

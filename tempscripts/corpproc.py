@@ -333,7 +333,6 @@ def load_previous_session(folder):
 
 
 
-
 ###########################################
 class CashDicts():
     def __init__(self):
