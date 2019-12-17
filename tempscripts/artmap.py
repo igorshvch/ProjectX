@@ -6,6 +6,22 @@ from collections import Counter
 import debugger as dbg
 from writer import writer
 
+
+def main(corpus_iterator, folder, project_name):
+    try:
+        print('Documents in total:', len(corpus_iterator))
+    except:
+        print('Corpus length unavailable')
+    import pathlib as pthl
+    from time import time
+    ######1
+    time_subtotal = None
+    time_start_0 = time()
+    time_start = time()
+    ######2
+
+
+
 ART_SUB_SHORTHANDS = {
     'пункт': 'п',
     'подпункт': 'п',
@@ -64,12 +80,15 @@ LITERAL_TO_NUMERAL = {
     'одиннадцать': '11',
     'двенадцать': '12',
     'треть': '3',
-    'четвертовать': '4',
+    'четвертовать': '4', #due to pymorphy2 specifics
 }
 
 
 @dbg.timer_with_func_name
-def find_demands(corp_iter):
+def _spl_find_demands(corp_iter):
+    '''
+    Supplementary function for demands finding
+    '''
     demands = []
     errors = []
     for ind, doc in enumerate(corp_iter):
@@ -77,7 +96,7 @@ def find_demands(corp_iter):
             print('Docs:', ind)
         text = doc['Текст документа']
         re_obj = re.search(
-            r'\n([Уу]становил:\n.*|[Уу]становила:\n.*).*(?=\.\n)',
+            r'\n([Уу]становил:\n.*|[Уу]становила:\n.*).*(?=\.\n)', # r'\n[Рр]ассмотрел[а]{0,1}.*?\n[Уу]станови[ла:]{1,3}\n
             text
         )
         if re_obj:
@@ -86,7 +105,10 @@ def find_demands(corp_iter):
             errors.append(ind)
     return demands, errors
 
-def print_random_error(corp_iter, errors):
+def _spl_print_random_error(corp_iter, errors):
+    '''
+    Supplementary function for printing errors which were found during demands findings
+    '''
     def inner_f(start=0, lng=400, num=None):
         if not num:
             numb = errors[random.randint(0, len(errors)-1)]
@@ -96,7 +118,11 @@ def print_random_error(corp_iter, errors):
         print(corp_iter[numb]['Текст документа'][start:lng])
     return inner_f
 
-def create_first_word_dct(corp_iter):
+def _spl_create_first_word_dct(corp_iter):
+    '''
+    Supplementary function for creating a dict of all words.
+    Keys in the dict are letters
+    '''
     dct = {}
     split_docs = []
     for d in corp_iter:
@@ -357,7 +383,7 @@ def main_normalize_strings_in_lists(list_of_lists, parser):
     print('\tcreated list_of_lem_strings, length:', len(list_of_lem_strings))
     return list_of_lem_strings
 
-def list_of_lem_strings_count_adn_pretty(list_of_lem_strings):
+def list_of_lem_strings_count_and_pretty(list_of_lem_strings):
     '''
     Return:
     [
